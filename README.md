@@ -2,10 +2,10 @@
 
 **AI-powered trading signal generator using Smart Money Concepts (SMC)**
 
-[![GitHub Pages](https://img.shields.io/badge/Live-GitHub%20Pages-blue?style=flat-square&logo=github)](https://yashwanth673.github.io/trading-signal-ai/)
+[![GitHub Pages](https://img.shields.io/badge/Live-GitHub%20Pages-blue?style=flat-square&logo=github)](https://yashwanth637.github.io/trading-signal-ai/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
-> **Live Site:** https://yashwanth673.github.io/trading-signal-ai/
+> **Live Site:** https://yashwanth637.github.io/trading-signal-ai/
 
 ---
 
@@ -28,7 +28,7 @@
 
 ### Option 1: Use the Live Site (Recommended)
 
-1. Go to **https://yashwanth673.github.io/trading-signal-ai/**
+1. Go to **https://yashwanth637.github.io/trading-signal-ai/**
 2. Click **⚙ Settings** and enter:
    - Your **Gemini API Key** (free — get it at [aistudio.google.com](https://aistudio.google.com/app/apikey))
    - Your **Alpha Vantage API Key** (free — get it at [alphavantage.co](https://www.alphavantage.co/support/#api-key)) for Forex
@@ -39,7 +39,7 @@
 
 ```bash
 # Clone the repo
-git clone https://github.com/yashwanth673/trading-signal-ai.git
+git clone https://github.com/yashwanth637/trading-signal-ai.git
 cd trading-signal-ai
 
 # Serve with any static server — e.g. VS Code Live Server, or:
@@ -133,13 +133,13 @@ git init
 git add .
 git commit -m "Initial release"
 git branch -M main
-git remote add origin https://github.com/yashwanth673/trading-signal-ai.git
+git remote add origin https://github.com/yashwanth637/trading-signal-ai.git
 git push -u origin main
 
 # 3. Enable GitHub Pages
 # Go to: GitHub repo → Settings → Pages
 # Source: Deploy from branch → main → / (root)
-# Save — site will be live at https://yashwanth673.github.io/trading-signal-ai/
+# Save — site will be live at https://yashwanth637.github.io/trading-signal-ai/
 ```
 
 ---
@@ -194,4 +194,4 @@ trading-signal-ai/
 
 ## License
 
-MIT © 2024 [yashwanth673](https://github.com/yashwanth673)
+MIT © 2024 [yashwanth637](https://github.com/yashwanth637)
