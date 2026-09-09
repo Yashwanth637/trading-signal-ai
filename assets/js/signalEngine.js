@@ -2,10 +2,10 @@
  * signalEngine.js — TradersZone.ai Orchestrator
  *
  * Coordinates:
- *   - Background 4-Lane Intelligence Engine
- *   - PerformanceTracker (Grading calls real-time: Target Hit vs Stop Hit)
- *   - ChartManager (Forecast Shaded Boxes, Markers, Levels)
- *   - Clean UI Updates with Simple AI Sentences
+ *   - Yashwanth's Pine Script S/R Horizon Boxes
+ *   - Historical & Live BUY / SELL Arrow Markers on Chart
+ *   - Performance Tracker
+ *   - UI State Updates
  */
 
 import { FourLaneEngine } from './fourLaneEngine.js';
@@ -48,7 +48,7 @@ export class SignalEngine {
 
     const latest = candles[candles.length - 1];
 
-    // 1. Check open calls for Target Hit or Stop Hit against incoming candle
+    // 1. Grade open calls against live price
     const resolvedCalls = this._tracker.updateOnCandle(this._symbol, latest);
     for (const r of resolvedCalls) {
       this._onCallResolved?.(r);
@@ -58,7 +58,7 @@ export class SignalEngine {
       );
     }
 
-    // 2. Execute 4-lane background analysis
+    // 2. Run analysis
     const verdictData = await this._engine.analyze({
       candles,
       symbol: this._symbol,
@@ -66,12 +66,17 @@ export class SignalEngine {
       htfTrend: this._htfTrend,
     });
 
-    // 3. Draw SMC zones on chart
-    if (verdictData.smcData) {
-      this._chart.drawSMCZones(verdictData.smcData);
+    // 3. Draw Pine Script S/R Horizon Boxes
+    if (verdictData.horizonZones) {
+      this._chart.drawHorizonBoxes(verdictData.horizonZones);
     }
 
-    // 4. Handle Actionable Signal (BUY or SELL)
+    // 4. Populate Historical & Live Signal Markers
+    if (verdictData.historicalSignals && verdictData.historicalSignals.length > 0) {
+      this._chart.setAllMarkers(verdictData.historicalSignals);
+    }
+
+    // 5. Handle Live Actionable Signal
     if (verdictData.verdict === 'BUY' || verdictData.verdict === 'SELL') {
       const levels = verdictData.levels;
 
@@ -89,10 +94,15 @@ export class SignalEngine {
         takeProfit: levels.target,
       });
 
+      this._chart.addSignalMarker({
+        time: latest.time,
+        type: verdictData.verdict,
+        text: `${verdictData.verdict} · ${verdictData.confidence}%`,
+      });
+
       if (latest.time > this._lastSignalTime) {
         this._lastSignalTime = latest.time;
 
-        // Register with Performance Tracker
         this._tracker.registerCall({
           symbol: this._symbol,
           timeframe: this._timeframe,
@@ -106,14 +116,6 @@ export class SignalEngine {
           reasons: [verdictData.aiReason],
         });
 
-        // Add visual marker
-        this._chart.addSignalMarker({
-          time: latest.time,
-          type: verdictData.verdict,
-          text: `${verdictData.verdict} · ${verdictData.confidence}%`,
-        });
-
-        // Browser push notification
         Notifications.fireSignalAlert({
           type: verdictData.verdict,
           symbol: this._symbol,
@@ -126,12 +128,10 @@ export class SignalEngine {
         });
       }
     } else {
-      // WAIT verdict
       this._chart.clearProjectionZones();
       this._chart.clearSLTPLines();
     }
 
-    // 5. Update UI
     this._onVerdictUpdate?.(verdictData);
   }
 
@@ -144,8 +144,12 @@ export class SignalEngine {
       htfTrend: this._htfTrend,
     });
 
-    if (verdictData.smcData) {
-      this._chart.drawSMCZones(verdictData.smcData);
+    if (verdictData.horizonZones) {
+      this._chart.drawHorizonBoxes(verdictData.horizonZones);
+    }
+
+    if (verdictData.historicalSignals && verdictData.historicalSignals.length > 0) {
+      this._chart.setAllMarkers(verdictData.historicalSignals);
     }
 
     if (verdictData.verdict === 'BUY' || verdictData.verdict === 'SELL') {
@@ -161,6 +165,11 @@ export class SignalEngine {
         entryPrice: levels.entry,
         stopLoss: levels.stop,
         takeProfit: levels.target,
+      });
+      this._chart.addSignalMarker({
+        time: candles[candles.length - 1].time,
+        type: verdictData.verdict,
+        text: `${verdictData.verdict} · ${verdictData.confidence}%`,
       });
     }
 

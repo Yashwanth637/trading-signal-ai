@@ -2,10 +2,10 @@
  * chart.js — TradersZone.ai Lightweight Charts v4 Wrapper
  *
  * Implements:
- *   - Deeepr.ai Buoyancy Floating Level Cards (TP, SL, Entry) with grip handles and physics animation
- *   - Complete dynamic Light & Dark Theme Adaptability
- *   - Forward-projected shaded TP & SL forecast zones
- *   - Clean pair switching and price line management
+ *   - Yashwanth's Pine Script v6 S/R Horizon Boxes (connected to candle bodies, not wicks)
+ *   - Resistance: Cyan (#00bcd4) / Support: Yellow (#ffeb3b) with Anti-Stacking & Breach Freeze
+ *   - Visible BUY (green arrow) and SELL (red arrow) markers across historical & live candles
+ *   - Instant zero-lag Light/Dark theme switching
  */
 
 class RectZonePrimitive {
@@ -94,13 +94,13 @@ class RectZoneView {
 
           if (border) {
             ctx.strokeStyle = border;
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 1.2;
             ctx.strokeRect(rx1, ry1, rw, rh);
           }
 
-          if (label && rw > 40 && rh > 12) {
+          if (label && rw > 45 && rh > 10) {
             ctx.fillStyle = border || '#ffffff';
-            ctx.font = `${Math.round(10 * vpr)}px 'JetBrains Mono', monospace`;
+            ctx.font = `bold ${Math.round(10 * vpr)}px 'JetBrains Mono', monospace`;
             ctx.fillText(label, rx1 + 6 * hpr, ry1 + 12 * vpr);
           }
           ctx.restore();
@@ -121,6 +121,7 @@ export class ChartManager {
     this._vol = null;
     this._markers = [];
     this._primitives = {};
+    this._zonePrimitives = [];
     this._projectionPrimitives = [];
     this._priceLines = [];
     this._zoneLayer = null;
@@ -131,7 +132,7 @@ export class ChartManager {
     this._theme = theme;
     const colors = this._colors(theme);
 
-    // Main Chart
+    // Main Candlestick Chart
     this._chart = LightweightCharts.createChart(this._mainEl, {
       layout: {
         background: { type: 'solid', color: colors.bg },
@@ -196,7 +197,6 @@ export class ChartManager {
 
       this._chart.timeScale().subscribeVisibleLogicalRangeChange(r => {
         if (r) this._volChart.timeScale().setVisibleLogicalRange(r);
-        this._repositionBuoyancyCards();
       });
       this._volChart.timeScale().subscribeVisibleLogicalRangeChange(r => {
         if (r) this._chart.timeScale().setVisibleLogicalRange(r);
@@ -206,7 +206,6 @@ export class ChartManager {
     new ResizeObserver(() => {
       this._chart.applyOptions({ autoSize: true });
       this._volChart?.applyOptions({ autoSize: true });
-      this._repositionBuoyancyCards();
     }).observe(this._mainEl);
   }
 
@@ -231,7 +230,6 @@ export class ChartManager {
       })));
     }
     this._chart.timeScale().fitContent();
-    this._repositionBuoyancyCards();
   }
 
   updateCandle(candle) {
@@ -246,12 +244,82 @@ export class ChartManager {
     }
   }
 
-  // ─── DEEEPR FORWARD-PROJECTED SHADED ZONES + BUOYANCY CARDS ──────
+  // ─── PINE SCRIPT v6 S/R HORIZON BOXES ─────────────────────────────
+  drawHorizonBoxes(horizonZones) {
+    if (!this._zoneLayer || !horizonZones) return;
+
+    // Clear old zone primitives
+    for (const p of this._zonePrimitives) {
+      try { this._zoneLayer.detachPrimitive(p); } catch {}
+    }
+    this._zonePrimitives = [];
+
+    // Filter to latest active and recently breached zones
+    const activeZones = horizonZones.slice(-14);
+
+    activeZones.forEach(z => {
+      const isRes = z.isResistance;
+      // Exact Pine Script Colors
+      // Resistance: Cyan #00bcd4 / Support: Yellow #ffeb3b
+      const fill = isRes ? 'rgba(0, 188, 212, 0.14)' : 'rgba(255, 235, 59, 0.14)';
+      const border = isRes ? '#00bcd4' : '#ffeb3b';
+      const label = isRes ? (z.isBreached ? 'RES [Breached]' : 'RESISTANCE') : (z.isBreached ? 'SUP [Breached]' : 'SUPPORT');
+
+      const prim = new RectZonePrimitive(
+        z.top,
+        z.bottom,
+        z.originTime,
+        z.endTime,
+        fill,
+        border,
+        label
+      );
+
+      this._zoneLayer.attachPrimitive(prim);
+      this._zonePrimitives.push(prim);
+    });
+  }
+
+  // ─── BUY & SELL SIGNAL MARKERS ───────────────────────────────────
+  setAllMarkers(markers) {
+    this._markers = markers.map(m => ({
+      time: m.time,
+      position: m.type === 'BUY' ? 'belowBar' : 'aboveBar',
+      color: m.type === 'BUY' ? '#00f090' : '#ff3366',
+      shape: m.type === 'BUY' ? 'arrowUp' : 'arrowDown',
+      text: m.type === 'BUY' ? 'BUY ▲' : 'SELL ▼',
+      size: 2,
+    }));
+    this._candles?.setMarkers(this._markers);
+  }
+
+  addSignalMarker({ time, type, text = '' }) {
+    const existing = this._markers.find(m => m.time === time);
+    if (existing) return;
+
+    this._markers.push({
+      time,
+      position: type === 'BUY' ? 'belowBar' : 'aboveBar',
+      color: type === 'BUY' ? '#00f090' : '#ff3366',
+      shape: type === 'BUY' ? 'arrowUp' : 'arrowDown',
+      text: text || (type === 'BUY' ? 'BUY ▲' : 'SELL ▼'),
+      size: 2,
+    });
+    if (this._markers.length > 50) this._markers.shift();
+    this._candles?.setMarkers(this._markers);
+  }
+
+  clearMarkers() {
+    this._markers = [];
+    this._candles?.setMarkers([]);
+  }
+
+  // ─── FORWARD-PROJECTED TARGET & STOP BOXES ───────────────────────
   drawProjectionZones({ entry, target, stop, verdict, startTime }) {
     if (!this._zoneLayer || !target || !stop) return;
     this.clearProjectionZones();
 
-    const futureTime = (startTime || Math.floor(Date.now() / 1000)) + 3600 * 25;
+    const futureTime = (startTime || Math.floor(Date.now() / 1000)) + 3600 * 20;
 
     if (verdict === 'BUY' || verdict === 'LONG') {
       const tpPrim = new RectZonePrimitive(target, entry, startTime, futureTime, 'rgba(0, 240, 144, 0.16)', '#00f090', `TP: ${target}`);
@@ -266,104 +334,6 @@ export class ChartManager {
       this._zoneLayer.attachPrimitive(slPrim);
       this._projectionPrimitives.push(tpPrim, slPrim);
     }
-
-    // Render Deeepr Buoyancy Floating Level Cards
-    this._renderBuoyancyLevelCards({ entry, target, stop, verdict });
-  }
-
-  _renderBuoyancyLevelCards({ entry, target, stop, verdict }) {
-    if (!this._buoyancyOverlay || !this._candles) return;
-    this._buoyancyOverlay.innerHTML = '';
-
-    const yTP = this._candles.priceToCoordinate(target) || 70;
-    const ySL = this._candles.priceToCoordinate(stop) || 240;
-    const yEntry = this._candles.priceToCoordinate(entry) || 150;
-    const targetPct = +(((Math.abs(target - entry)) / entry) * 100).toFixed(2);
-
-    this._buoyancyOverlay.innerHTML = `
-      <div class="chip-pct" style="top: ${Math.max(10, yTP - 26)}px; right: 90px;">+${targetPct}% Target</div>
-      <div class="lvlcard tp-lvlcard" id="card-tp" style="top: ${Math.max(15, yTP - 14)}px; right: 90px;" title="Drag to adjust Take Profit">
-        <span class="bdg tp">TP</span>
-        <span class="val tp">${target}</span>
-        <span class="grip">⋮ ⋮</span>
-      </div>
-      <div class="entry-tag" style="top: ${Math.max(15, yEntry - 10)}px; right: 190px;">
-        <span style="color:var(--text-3);text-transform:uppercase;font-size:9px;">Entry</span> ${entry}
-      </div>
-      <div class="lvlcard sl-lvlcard" id="card-sl" style="top: ${Math.max(15, ySL - 14)}px; right: 90px;" title="Drag to adjust Stop Loss">
-        <span class="bdg sl">SL</span>
-        <span class="val sl">${stop}</span>
-        <span class="grip">⋮ ⋮</span>
-      </div>
-    `;
-
-    // Make buoyancy cards interactively draggable along chart
-    this._makeDraggable('card-tp', (newY) => {
-      const newPrice = this._candles.coordinateToPrice(newY);
-      if (newPrice) {
-        document.querySelector('#card-tp .val.tp').textContent = newPrice.toFixed(2);
-        this.showSLTPLines({ entryPrice: entry, stopLoss: stop, takeProfit: newPrice });
-      }
-    });
-
-    this._makeDraggable('card-sl', (newY) => {
-      const newPrice = this._candles.coordinateToPrice(newY);
-      if (newPrice) {
-        document.querySelector('#card-sl .val.sl').textContent = newPrice.toFixed(2);
-        this.showSLTPLines({ entryPrice: entry, stopLoss: newPrice, takeProfit: target });
-      }
-    });
-  }
-
-  _makeDraggable(elemId, onDragY) {
-    const el = document.getElementById(elemId);
-    if (!el) return;
-
-    let isDragging = false;
-    let startY = 0;
-    let startTop = 0;
-
-    const onMouseDown = (e) => {
-      isDragging = true;
-      startY = e.clientY;
-      startTop = parseInt(el.style.top || '0');
-      el.style.animation = 'none';
-      document.addEventListener('mousemove', onMouseMove);
-      document.addEventListener('mouseup', onMouseUp);
-    };
-
-    const onMouseMove = (e) => {
-      if (!isDragging) return;
-      const delta = e.clientY - startY;
-      const newTop = Math.max(10, Math.min(360, startTop + delta));
-      el.style.top = `${newTop}px`;
-      onDragY(newTop);
-    };
-
-    const onMouseUp = () => {
-      isDragging = false;
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    };
-
-    el.addEventListener('mousedown', onMouseDown);
-  }
-
-  _repositionBuoyancyCards() {
-    // Re-align on scale change if cards exist
-    const tpEl = document.getElementById('card-tp');
-    const slEl = document.getElementById('card-sl');
-    if (!tpEl || !slEl || !this._candles) return;
-
-    const tpVal = parseFloat(tpEl.querySelector('.val')?.textContent);
-    const slVal = parseFloat(slEl.querySelector('.val')?.textContent);
-
-    if (tpVal && this._candles.priceToCoordinate(tpVal) !== null) {
-      tpEl.style.top = `${Math.max(10, this._candles.priceToCoordinate(tpVal) - 14)}px`;
-    }
-    if (slVal && this._candles.priceToCoordinate(slVal) !== null) {
-      slEl.style.top = `${Math.max(10, this._candles.priceToCoordinate(slVal) - 14)}px`;
-    }
   }
 
   clearProjectionZones() {
@@ -371,52 +341,6 @@ export class ChartManager {
       try { this._zoneLayer.detachPrimitive(p); } catch {}
     }
     this._projectionPrimitives = [];
-    if (this._buoyancyOverlay) {
-      this._buoyancyOverlay.innerHTML = '';
-    }
-  }
-
-  drawSMCZones(smcResult) {
-    if (!this._zoneLayer || !smcResult) return;
-    for (const prim of Object.values(this._primitives)) {
-      try { this._zoneLayer.detachPrimitive(prim); } catch {}
-    }
-    this._primitives = {};
-
-    const { orderBlocks = [], fvgs = [] } = smcResult;
-    const futureTime = Math.floor(Date.now() / 1000) + 3600 * 15;
-
-    orderBlocks.slice(-4).forEach((ob, i) => {
-      const isBull = ob.type === 'BULLISH_OB';
-      const prim = new RectZonePrimitive(ob.top, ob.bottom, ob.time, futureTime, isBull ? 'rgba(0, 212, 255, 0.14)' : 'rgba(168, 85, 247, 0.14)', isBull ? '#00d4ff' : '#a855f7', 'OB');
-      this._primitives[`ob_${i}`] = prim;
-      this._zoneLayer.attachPrimitive(prim);
-    });
-
-    fvgs.slice(-4).forEach((fvg, i) => {
-      const isBull = fvg.type === 'BULLISH_FVG';
-      const prim = new RectZonePrimitive(fvg.top, fvg.bottom, fvg.time, futureTime, isBull ? 'rgba(255, 193, 7, 0.10)' : 'rgba(233, 30, 99, 0.10)', isBull ? '#ffc107' : '#e91e63', 'FVG');
-      this._primitives[`fvg_${i}`] = prim;
-      this._zoneLayer.attachPrimitive(prim);
-    });
-  }
-
-  addSignalMarker({ time, type, text = '' }) {
-    this._markers.push({
-      time,
-      position: type === 'BUY' || type === 'LONG' ? 'belowBar' : 'aboveBar',
-      color: type === 'BUY' || type === 'LONG' ? '#00f090' : '#ff3366',
-      shape: type === 'BUY' || type === 'LONG' ? 'arrowUp' : 'arrowDown',
-      text: text || type,
-      size: 2,
-    });
-    if (this._markers.length > 40) this._markers.shift();
-    this._candles.setMarkers(this._markers);
-  }
-
-  clearMarkers() {
-    this._markers = [];
-    this._candles?.setMarkers([]);
   }
 
   showSLTPLines({ entryPrice, stopLoss, takeProfit }) {
@@ -431,13 +355,13 @@ export class ChartManager {
     }
     if (stopLoss) {
       this._slLine = this._candles.createPriceLine({
-        price: stopLoss, color: isDark ? '#ff3366' : '#dc2626',
+        price: stopLoss, color: '#ff3366',
         lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dotted, axisLabelVisible: true, title: 'SL',
       });
     }
     if (takeProfit) {
       this._tpLine = this._candles.createPriceLine({
-        price: takeProfit, color: isDark ? '#00f090' : '#059669',
+        price: takeProfit, color: '#00f090',
         lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dotted, axisLabelVisible: true, title: 'TP',
       });
     }
@@ -450,7 +374,7 @@ export class ChartManager {
     this._slLine = this._tpLine = this._entLine = null;
   }
 
-  // ─── INSTANT LIGHT & DARK THEME FLIP ─────────────────────────────
+  // ─── INSTANT ZERO-LAG THEME UPDATE ───────────────────────────────
   setTheme(theme) {
     this._theme = theme;
     const colors = this._colors(theme);
@@ -496,17 +420,17 @@ export class ChartManager {
 
   _colors(theme) {
     return theme === 'dark' ? {
-      bg: '#03060f', // TradersZone Obsidian Void
+      bg: '#03060f',
       text: '#94a3b8',
       gridLine: 'rgba(255, 255, 255, 0.02)',
       border: '#162238',
       crosshair: '#00d4ff',
-      labelBg: '#090f1c',
+      labelBg: '#080d18',
       bullCandle: '#00f090',
       bearCandle: '#ff3366',
       volBar: 'rgba(0, 212, 255, 0.35)',
     } : {
-      bg: '#ffffff', // Clean Pure White Light Mode
+      bg: '#ffffff',
       text: '#334155',
       gridLine: '#edf1f7',
       border: '#d8e0ec',
