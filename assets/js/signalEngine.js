@@ -1,187 +1,190 @@
 /**
- * signalEngine.js — Signal aggregator
+ * signalEngine.js — Signal & 4-Lane Orchestrator
  *
- * Orchestrates:
- *  - SMC Engine (logic)
- *  - AI Engine (Gemini confirmation)
- *  - Chart zone rendering
- *  - Notification dispatch
- *  - Signal history log
+ * Coordinates:
+ *   - FourLaneEngine ([T] Tech, [F] Flow, [N] News, [M] Macro)
+ *   - PerformanceTracker (Graded Calls: Target Hit vs Stop Hit)
+ *   - ChartManager (Projected Shaded Boxes, Markers, Lines)
+ *   - Notifications & Audio Alerts
  */
 
-import { SMCEngine }     from './smcEngine.js';
-import { AIEngine }      from './aiEngine.js';
+import { FourLaneEngine } from './fourLaneEngine.js';
+import { PerformanceTracker } from './performanceTracker.js';
 import { Notifications } from './notifications.js';
-import { Settings }      from './settings.js';
-
-// Minimum RR to accept a signal (must be ≥ 1.5)
-const MIN_RR = 1.5;
 
 export class SignalEngine {
   /**
    * @param {ChartManager} chartManager
-   * @param {Function} onSignal  callback(signal) called when a signal fires
+   * @param {Function} onVerdictUpdate  callback(verdictData)
+   * @param {Function} onCallResolved   callback(resolvedCall)
    */
-  constructor(chartManager, onSignal) {
-    this._chart     = chartManager;
-    this._onSignal  = onSignal;
-    this._smc       = null;     // SMCEngine instance (re-created on settings change)
-    this._signals   = [];       // Signal history (last 50)
-    this._lastSignalTime = 0;   // Debounce: 1 signal per candle
-    this._htfTrend  = 'NEUTRAL';
-    this._symbol    = '';
+  constructor(chartManager, onVerdictUpdate, onCallResolved) {
+    this._chart = chartManager;
+    this._onVerdictUpdate = onVerdictUpdate;
+    this._onCallResolved = onCallResolved;
+    this._engine = new FourLaneEngine();
+    this._tracker = new PerformanceTracker();
+
+    this._symbol = '';
     this._timeframe = '';
-    this._market    = '';
-    this._running   = false;
-    this._refreshSMC();
+    this._market = '';
+    this._htfTrend = 'NEUTRAL';
+    this._running = false;
+    this._lastSignalTime = 0;
   }
 
-  _refreshSMC() {
-    this._smc = new SMCEngine({
-      swingLookback:   Settings.getSwingLookback(),
-      signalThreshold: Settings.getSMCThreshold(),
-    });
-  }
-
-  /** Start signal engine for a given symbol/TF */
   start(symbol, timeframe, market) {
-    this._symbol    = symbol;
+    this._symbol = symbol;
     this._timeframe = timeframe;
-    this._market    = market;
-    this._running   = true;
-    this._refreshSMC();
+    this._market = market;
+    this._running = true;
   }
 
   stop() {
     this._running = false;
   }
 
-  get signals() { return [...this._signals]; }
+  get tracker() {
+    return this._tracker;
+  }
 
   /**
-   * Called on every new closed candle from DataFeed.
-   * Runs full SMC analysis and fires signal if conditions met.
-   * @param {Candle[]} candles  Full candle history up to now
+   * Process an incoming closed candle or full history update
+   * @param {Candle[]} candles
    */
   async onNewCandle(candles) {
-    if (!this._running || candles.length < 20) return;
+    if (!this._running || !candles || candles.length < 20) return;
 
     const latest = candles[candles.length - 1];
 
-    // Debounce: skip if we already signaled on this candle
-    if (latest.time <= this._lastSignalTime) return;
-
-    // Run SMC analysis
-    const smcResult = this._smc.analyze(candles, this._htfTrend);
-
-    // Always draw SMC zones on chart (regardless of signal)
-    this._chart.drawSMCZones(smcResult);
-
-    // Only proceed if logic engine has a non-NEUTRAL signal
-    if (smcResult.signal === 'NEUTRAL') return;
-
-    // Require minimum RR
-    if (smcResult.riskReward !== null && smcResult.riskReward < MIN_RR) {
-      console.log(`[SignalEngine] RR too low (${smcResult.riskReward}) — skipping`);
-      return;
+    // 1. Grade open calls against the incoming candle in real-time
+    const resolvedCalls = this._tracker.updateOnCandle(this._symbol, latest);
+    for (const r of resolvedCalls) {
+      this._onCallResolved?.(r);
+      const isWin = r.status === 'TARGET_HIT';
+      Notifications.fireInfo(
+        `${isWin ? '🎯 Target Hit' : '🛑 Stop Hit'} — ${r.symbol}`,
+        `${r.verdict} completed at ${r.exitPrice} (${r.realizedPnlPct > 0 ? '+' : ''}${r.realizedPnlPct}%)`
+      );
     }
 
-    this._lastSignalTime = latest.time;
+    // 2. Run 4-Lane Real-Time Analysis
+    const verdictData = await this._engine.analyze({
+      candles,
+      symbol: this._symbol,
+      timeframe: this._timeframe,
+      htfTrend: this._htfTrend,
+    });
 
-    // Get AI confirmation (async, non-blocking for UI)
-    let aiResult;
-    try {
-      aiResult = await AIEngine.analyzeSignal({
-        symbol:    this._symbol,
-        timeframe: this._timeframe,
-        market:    this._market,
-        smcResult,
-        candles,
+    // 3. Draw SMC structural zones
+    if (verdictData.smcData) {
+      this._chart.drawSMCZones(verdictData.smcData);
+    }
+
+    // 4. Handle actionable trade calls (LONG or SHORT)
+    if (verdictData.verdict === 'LONG' || verdictData.verdict === 'SHORT') {
+      const levels = verdictData.levels;
+
+      // Draw Deeepr-style forward-projected shaded boxes on chart
+      this._chart.drawProjectionZones({
+        entry: levels.entry,
+        target: levels.target,
+        stop: levels.stop,
+        verdict: verdictData.verdict,
+        startTime: latest.time,
       });
-    } catch {
-      aiResult = {
-        source: 'LOGIC_ONLY', finalSignal: smcResult.signal,
-        finalConfidence: smcResult.confidence, reasoning: '',
-        adjustedSL: smcResult.stopLoss, adjustedTP: smcResult.takeProfit,
-      };
+
+      this._chart.showSLTPLines({
+        entryPrice: levels.entry,
+        stopLoss: levels.stop,
+        takeProfit: levels.target,
+      });
+
+      // Avoid double-signaling on identical bar
+      if (latest.time > this._lastSignalTime) {
+        this._lastSignalTime = latest.time;
+
+        // Register to Graded Calls Performance Tracker
+        this._tracker.registerCall({
+          symbol: this._symbol,
+          timeframe: this._timeframe,
+          verdict: verdictData.verdict,
+          entry: levels.entry,
+          target: levels.target,
+          stop: levels.stop,
+          targetPct: levels.targetPct,
+          stopPct: levels.stopPct,
+          riskReward: levels.riskReward,
+          reasons: verdictData.reasons,
+        });
+
+        // Add visual arrow marker to chart
+        this._chart.addSignalMarker({
+          time: latest.time,
+          type: verdictData.verdict,
+          text: `${verdictData.verdict} · ${verdictData.agreementCount}/4`,
+        });
+
+        // Dispatch browser notification & audio alert
+        Notifications.fireSignalAlert({
+          type: verdictData.verdict === 'LONG' ? 'BUY' : 'SELL',
+          symbol: this._symbol,
+          timeframe: this._timeframe,
+          confidence: verdictData.confidence,
+          price: levels.entry,
+          stopLoss: levels.stop,
+          takeProfit: levels.target,
+          riskReward: levels.riskReward,
+        });
+      }
+    } else {
+      // Verdict is WAIT
+      this._chart.clearProjectionZones();
+      this._chart.clearSLTPLines();
     }
 
-    // AI can veto the signal
-    if (aiResult.finalSignal === 'NEUTRAL') {
-      console.log('[SignalEngine] AI vetoed signal — standing aside');
-      return;
-    }
-
-    // Build final signal object
-    const signal = {
-      id:          `${this._symbol}_${latest.time}`,
-      type:        aiResult.finalSignal,
-      symbol:      this._symbol,
-      timeframe:   this._timeframe,
-      market:      this._market,
-      price:       latest.close,
-      stopLoss:    aiResult.adjustedSL  ?? smcResult.stopLoss,
-      takeProfit:  aiResult.adjustedTP  ?? smcResult.takeProfit,
-      riskReward:  smcResult.riskReward,
-      confidence:  aiResult.finalConfidence,
-      logicScore:  smcResult.confidence,
-      aiScore:     aiResult.aiSignal !== null ? aiResult.finalConfidence : null,
-      reasons:     smcResult.reasons,
-      reasoning:   aiResult.reasoning,
-      warnings:    aiResult.warnings,
-      source:      aiResult.source,
-      bosSignal:   smcResult.bosSignal,
-      trend:       smcResult.trend,
-      atr:         smcResult.atr,
-      timestamp:   Date.now(),
-      candleTime:  latest.time,
-    };
-
-    // Add arrow marker to chart
-    this._chart.addSignalMarker({
-      time: latest.time,
-      type: signal.type,
-      text: `${signal.type} ${signal.confidence}%`,
-    });
-
-    // Show SL/TP lines
-    this._chart.showSLTPLines({
-      entryPrice: signal.price,
-      stopLoss:   signal.stopLoss,
-      takeProfit: signal.takeProfit,
-    });
-
-    // Add to history (keep last 50)
-    this._signals.unshift(signal);
-    if (this._signals.length > 50) this._signals.pop();
-
-    // Fire browser notification
-    Notifications.fireSignalAlert(signal);
-
-    // Notify UI callback
-    this._onSignal?.(signal);
-
-    console.log(`[SignalEngine] ${signal.type} signal on ${signal.symbol} @ ${signal.price} | Confidence: ${signal.confidence}% | RR: ${signal.riskReward}`);
+    // 5. Notify UI to update Hero Card & Lane breakdown
+    this._onVerdictUpdate?.(verdictData);
   }
 
   /**
-   * Run analysis without waiting for a new closed candle.
-   * Used for "Analyze Now" button.
+   * Manual instant analysis (e.g. from "⚡ Analyze" button)
+   * @param {Candle[]} candles
    */
   async analyzeNow(candles) {
     if (!candles || candles.length < 20) return null;
-    const smcResult = this._smc.analyze(candles, this._htfTrend);
-    this._chart.drawSMCZones(smcResult);
-    return smcResult;
+    const verdictData = await this._engine.analyze({
+      candles,
+      symbol: this._symbol,
+      timeframe: this._timeframe,
+      htfTrend: this._htfTrend,
+    });
+
+    if (verdictData.smcData) {
+      this._chart.drawSMCZones(verdictData.smcData);
+    }
+
+    if (verdictData.verdict === 'LONG' || verdictData.verdict === 'SHORT') {
+      const levels = verdictData.levels;
+      this._chart.drawProjectionZones({
+        entry: levels.entry,
+        target: levels.target,
+        stop: levels.stop,
+        verdict: verdictData.verdict,
+        startTime: candles[candles.length - 1].time,
+      });
+      this._chart.showSLTPLines({
+        entryPrice: levels.entry,
+        stopLoss: levels.stop,
+        takeProfit: levels.target,
+      });
+    }
+
+    this._onVerdictUpdate?.(verdictData);
+    return verdictData;
   }
 
-  /** Set HTF trend bias (called externally, e.g., from multi-TF dropdown) */
   setHTFTrend(trend) {
-    this._htfTrend = trend; // 'BULLISH' | 'BEARISH' | 'NEUTRAL'
+    this._htfTrend = trend;
   }
-
-  /** Reload SMC config from settings */
-  reloadConfig() { this._refreshSMC(); }
-
-  clearHistory() { this._signals = []; }
 }

@@ -1,30 +1,24 @@
 /**
- * app.js — Application bootstrap
- *
- * Entry point. Wires DataFeed → SignalEngine → UI → ChartManager.
- * Handles: symbol/TF selection, market switching, tab switching,
- *          theme toggle, settings, notification permission.
+ * app.js — Application Bootstrap & Deeepr.ai Workflow Coordinator
  */
 
-import { DataFeed }      from './dataFeed.js';
-import { ChartManager }  from './chart.js';
-import { SignalEngine }  from './signalEngine.js';
-import { UI }            from './ui.js';
-import { Settings }      from './settings.js';
+import { DataFeed } from './dataFeed.js';
+import { ChartManager } from './chart.js';
+import { SignalEngine } from './signalEngine.js';
+import { StrategyBuilder } from './strategyBuilder.js';
+import { UI } from './ui.js';
+import { Settings } from './settings.js';
 import { Notifications } from './notifications.js';
 
-// ─── Symbol lists ────────────────────────────────────────────────
 const CRYPTO_SYMBOLS = [
-  { value: 'BTCUSDT',  label: 'BTC/USDT' },
-  { value: 'ETHUSDT',  label: 'ETH/USDT' },
-  { value: 'BNBUSDT',  label: 'BNB/USDT' },
-  { value: 'SOLUSDT',  label: 'SOL/USDT' },
-  { value: 'XRPUSDT',  label: 'XRP/USDT' },
-  { value: 'ADAUSDT',  label: 'ADA/USDT' },
-  { value: 'DOGEUSDT', label: 'DOGE/USDT' },
+  { value: 'BTCUSDT', label: 'BTC/USDT' },
+  { value: 'ETHUSDT', label: 'ETH/USDT' },
+  { value: 'SOLUSDT', label: 'SOL/USDT' },
+  { value: 'BNBUSDT', label: 'BNB/USDT' },
+  { value: 'XRPUSDT', label: 'XRP/USDT' },
+  { value: 'ADAUSDT', label: 'ADA/USDT' },
   { value: 'AVAXUSDT', label: 'AVAX/USDT' },
-  { value: 'MATICUSDT',label: 'MATIC/USDT' },
-  { value: 'LINKUSDT', label: 'LINK/USDT' },
+  { value: 'DOGEUSDT', label: 'DOGE/USDT' },
 ];
 
 const FOREX_SYMBOLS = [
@@ -33,346 +27,295 @@ const FOREX_SYMBOLS = [
   { value: 'USDJPY', label: 'USD/JPY' },
   { value: 'AUDUSD', label: 'AUD/USD' },
   { value: 'USDCAD', label: 'USD/CAD' },
-  { value: 'USDCHF', label: 'USD/CHF' },
-  { value: 'NZDUSD', label: 'NZD/USD' },
   { value: 'XAUUSD', label: 'XAU/USD (Gold)' },
-  { value: 'GBPJPY', label: 'GBP/JPY' },
-  { value: 'EURJPY', label: 'EUR/JPY' },
 ];
 
-const TIMEFRAMES = [
-  { value: '1',   label: '1m' },
-  { value: '3',   label: '3m' },
-  { value: '5',   label: '5m' },
-  { value: '15',  label: '15m' },
-  { value: '30',  label: '30m' },
-  { value: '60',  label: '1H' },
-  { value: '120', label: '2H' },
-  { value: '240', label: '4H' },
-  { value: '720', label: '12H' },
-  { value: '1D',  label: '1D' },
-  { value: '1W',  label: '1W' },
-];
-
-// ─── App State ───────────────────────────────────────────────────
 let dataFeed;
 let chartManager;
 let signalEngine;
+let strategyBuilder;
 let ui;
 
-let currentSymbol    = Settings.getLastSymbol();
-let currentTF        = Settings.getLastTF();
-let currentMarket    = Settings.getLastMarket();
-let activeChartTab   = 'main'; // 'main' | 'tv'
-let isLoading        = false;
+let currentSymbol = Settings.getLastSymbol();
+let currentTF = Settings.getLastTF() || '60';
+let currentMarket = Settings.getLastMarket() || 'CRYPTO';
+let activeNav = 'terminal'; // 'terminal' | 'strategy' | 'graded'
 
-// ─── Initialize ──────────────────────────────────────────────────
 async function init() {
-  const theme = Settings.getTheme();
-
-  // Init UI manager
   ui = new UI();
-  ui.applyTheme(theme);
+  strategyBuilder = new StrategyBuilder();
 
-  // Populate symbol and TF dropdowns
+  // Populate symbol dropdown
   populateSymbolDropdown(currentMarket);
-  populateTFDropdown();
+  setDropdownValue('sym-select', currentSymbol);
 
-  // Restore last selections
-  setDropdownValue('symbol-select', currentSymbol);
-  setDropdownValue('tf-select', currentTF);
-  setMarketToggle(currentMarket);
-
-  // Init Chart
+  // Initialize Chart
   chartManager = new ChartManager('main-chart', 'vol-chart');
-  chartManager.init(theme);
+  chartManager.init('dark');
 
-  // Init Signal Engine
-  signalEngine = new SignalEngine(chartManager, (signal) => {
-    ui.addSignal(signal);
-    ui.toast(
-      `${signal.type} signal on ${signal.symbol} — ${signal.confidence}% confidence`,
-      signal.type === 'BUY' ? 'success' : 'danger',
-      5000,
-    );
-  });
+  // Initialize Signal Engine with callbacks for UI updates
+  signalEngine = new SignalEngine(
+    chartManager,
+    (verdictData) => {
+      ui.renderHeroVerdict(verdictData);
+      ui.renderLaneBreakdown(verdictData);
+      ui.renderGradedScorecard(signalEngine.tracker.getScorecard());
+    },
+    (resolvedCall) => {
+      ui.renderGradedScorecard(signalEngine.tracker.getScorecard());
+      ui.toast(
+        `${resolvedCall.status === 'TARGET_HIT' ? '🎯 Target Hit' : '🛑 Stop Hit'}: ${resolvedCall.symbol} ${resolvedCall.verdict}`,
+        resolvedCall.status === 'TARGET_HIT' ? 'success' : 'danger',
+        6000
+      );
+    }
+  );
 
-  // Init DataFeed
+  // Initialize Data Feed
   dataFeed = new DataFeed();
 
   dataFeed.on('history', (candles) => {
     chartManager.setHistory(candles);
     signalEngine.start(currentSymbol, currentTF, currentMarket);
-    ui.setStatus({ text: `Loaded ${candles.length} candles`, type: 'info' });
+    ui.setStatus({ text: `Loaded ${candles.length} candles · ${currentSymbol}`, type: 'ok', source: 'Live Stream' });
 
-    // Run initial analysis
-    runAnalysis(candles);
+    // Run initial 4-lane analysis
+    signalEngine.analyzeNow(candles);
+    ui.renderGradedScorecard(signalEngine.tracker.getScorecard());
   });
 
   dataFeed.on('candle', async (candle) => {
     chartManager.updateCandle(candle);
-    if (candle.isClosed !== false) { // closed or undefined = treat as closed
+    ui.updateTicker({ price: candle.close, change24h: null });
+
+    // Every closed candle triggers the 4-lane reconciliation engine
+    if (candle.isClosed !== false) {
       await signalEngine.onNewCandle(dataFeed.candles);
     }
-    // Update price ticker
-    ui.updateTicker({
-      symbol:    currentSymbol,
-      price:     candle.close,
-      change24h: null,
-    });
   });
 
   dataFeed.on('status', ({ connected, source }) => {
-    if (connected) {
-      ui.setConnected(source);
-    } else {
-      ui.setDisconnected();
-    }
+    ui.setStatus({
+      text: connected ? `Live stream connected` : `Reconnecting…`,
+      type: connected ? 'ok' : 'warn',
+      source: source || 'Binance WS',
+    });
   });
 
   dataFeed.on('error', (msg) => {
-    ui.setStatus({ text: msg, type: 'warn' });
-    ui.toast(msg, 'warning', 6000);
+    ui.toast(msg, 'warning', 5000);
   });
 
-  // Request notification permission
+  // Request browser notifications permission
   await Notifications.requestPermission();
 
-  // Wire UI event listeners
-  wireEvents();
+  // Wire all UI Event Handlers
+  wireEventListeners();
 
-  // Start data feed
-  await loadSymbol(currentSymbol, currentTF, currentMarket);
+  // Load initial data
+  await loadMarketData(currentSymbol, currentTF, currentMarket);
 }
 
-// ─── Load symbol ─────────────────────────────────────────────────
-async function loadSymbol(symbol, tf, market) {
-  if (isLoading) return;
-  isLoading = true;
-
-  ui.clearSignals();
-  chartManager.clearMarkers();
-  chartManager.clearSLTPLines();
+async function loadMarketData(symbol, tf, market) {
   signalEngine.stop();
-  ui.setStatus({ text: `Loading ${symbol} ${tf}…`, type: 'info' });
-
-  // Update TV widget if that tab is visible
-  updateTVWidget(symbol, tf, market);
+  ui.setStatus({ text: `Subscribing to ${symbol} (${tf})…`, type: 'info', source: market });
 
   try {
     await dataFeed.subscribe(symbol, tf, market);
-  } finally {
-    isLoading = false;
+  } catch (err) {
+    ui.toast(err.message, 'danger');
   }
 }
 
-async function runAnalysis(candles) {
-  ui.setAnalyzing();
-  const result = await signalEngine.analyzeNow(candles);
-  if (result) {
-    ui.showAnalysisPanel(result);
-    ui.setStatus({
-      text:   `Analysis complete — ${result.signal} (${result.confidence}%)`,
-      type:   result.signal === 'NEUTRAL' ? 'info' : 'ok',
-      source: 'SMC Engine',
-    });
-  }
-}
-
-// ─── Event Wiring ────────────────────────────────────────────────
-function wireEvents() {
-  // Symbol select
-  document.getElementById('symbol-select')?.addEventListener('change', e => {
+function wireEventListeners() {
+  // Symbol dropdown
+  document.getElementById('sym-select')?.addEventListener('change', (e) => {
     currentSymbol = e.target.value;
     Settings.setLastSymbol(currentSymbol);
-    loadSymbol(currentSymbol, currentTF, currentMarket);
-  });
-
-  // Custom symbol input
-  document.getElementById('symbol-input')?.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      const val = e.target.value.trim().toUpperCase();
-      if (val.length >= 3) {
-        currentSymbol = val;
-        Settings.setLastSymbol(val);
-        loadSymbol(val, currentTF, currentMarket);
-      }
-    }
-  });
-
-  // Timeframe buttons
-  document.querySelectorAll('.tf-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentTF = btn.dataset.tf;
-      Settings.setLastTF(currentTF);
-      loadSymbol(currentSymbol, currentTF, currentMarket);
-    });
-  });
-
-  // TF select dropdown (mobile fallback)
-  document.getElementById('tf-select')?.addEventListener('change', e => {
-    currentTF = e.target.value;
-    Settings.setLastTF(currentTF);
-    loadSymbol(currentSymbol, currentTF, currentMarket);
+    loadMarketData(currentSymbol, currentTF, currentMarket);
   });
 
   // Market toggle
-  document.querySelectorAll('.market-btn').forEach(btn => {
+  document.getElementById('mkt-crypto')?.addEventListener('click', () => switchMarket('CRYPTO'));
+  document.getElementById('mkt-forex')?.addEventListener('click', () => switchMarket('FOREX'));
+
+  // Timeframe chips
+  document.querySelectorAll('.tf-chip').forEach((btn) => {
     btn.addEventListener('click', () => {
-      currentMarket = btn.dataset.market;
-      Settings.setLastMarket(currentMarket);
-      setMarketToggle(currentMarket);
-      populateSymbolDropdown(currentMarket);
-      const defaultSymbol = currentMarket === 'CRYPTO' ? 'BTCUSDT' : 'EURUSD';
-      currentSymbol = defaultSymbol;
-      Settings.setLastSymbol(defaultSymbol);
-      setDropdownValue('symbol-select', defaultSymbol);
-      loadSymbol(currentSymbol, currentTF, currentMarket);
+      document.querySelectorAll('.tf-chip').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentTF = btn.dataset.tf;
+      Settings.setLastTF(currentTF);
+      loadMarketData(currentSymbol, currentTF, currentMarket);
     });
   });
 
-  // Chart tab switching
-  document.getElementById('tab-main')?.addEventListener('click', () => switchTab('main'));
-  document.getElementById('tab-tv')?.addEventListener('click',   () => switchTab('tv'));
-
-  // Theme toggle
-  document.getElementById('theme-toggle')?.addEventListener('click', () => {
-    const newTheme = Settings.getTheme() === 'dark' ? 'light' : 'dark';
-    Settings.setTheme(newTheme);
-    ui.applyTheme(newTheme);
-    chartManager.setTheme(newTheme);
-  });
-
-  // Settings modal
-  document.getElementById('settings-btn')?.addEventListener('click',  () => ui.openSettings());
-  document.getElementById('settings-close')?.addEventListener('click', () => ui.closeSettings());
-  document.getElementById('settings-save')?.addEventListener('click',  () => {
-    ui.saveSettings();
-    signalEngine.reloadConfig();
-  });
-
-  // Close modal on backdrop click
-  document.getElementById('settings-modal')?.addEventListener('click', e => {
-    if (e.target.id === 'settings-modal') ui.closeSettings();
-  });
-
   // Analyze Now button
-  document.getElementById('analyze-btn')?.addEventListener('click', () => {
-    const candles = dataFeed.candles;
-    if (candles.length > 0) runAnalysis(candles);
-    else ui.toast('No data loaded yet', 'warning');
+  document.getElementById('analyze-btn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('analyze-btn');
+    btn.classList.add('pulse');
+    ui.setStatus({ text: 'Executing 4-lane reconciliation…', type: 'info', source: 'Engine' });
+
+    const verdict = await signalEngine.analyzeNow(dataFeed.candles);
+    btn.classList.remove('pulse');
+
+    if (verdict) {
+      ui.toast(
+        verdict.verdict === 'WAIT'
+          ? `WAIT verdict: ${verdict.waitReason}`
+          : `Verdict: ${verdict.verdict} (${verdict.agreementCount}/4 lanes agree)`,
+        verdict.verdict === 'LONG' ? 'success' : verdict.verdict === 'SHORT' ? 'danger' : 'warning',
+        5000
+      );
+    }
   });
 
-  // Notification permission button
-  document.getElementById('notif-btn')?.addEventListener('click', async () => {
-    const perm = await Notifications.requestPermission();
-    if (perm === 'granted') ui.toast('Notifications enabled ✓', 'success');
-    else ui.toast('Notifications blocked in browser settings', 'warning');
+  // Strategy Builder compilation & backtest
+  document.getElementById('btn-compile-strategy')?.addEventListener('click', () => {
+    const promptInput = document.getElementById('strategy-prompt-input');
+    const prompt = promptInput?.value?.trim();
+    if (!prompt) {
+      ui.toast('Please enter a strategy description in plain English', 'warning');
+      return;
+    }
+
+    const compiled = strategyBuilder.compile(prompt);
+    const backtest = strategyBuilder.backtest(compiled, dataFeed.candles);
+    ui.renderStrategyResults(compiled, backtest);
+    ui.toast(`Strategy compiled and backtested on ${backtest.totalTrades} historical trades!`, 'success');
   });
 
   // HTF bias selector
-  document.getElementById('htf-bias')?.addEventListener('change', e => {
+  document.getElementById('htf-bias-sel')?.addEventListener('change', (e) => {
     signalEngine.setHTFTrend(e.target.value);
+    signalEngine.analyzeNow(dataFeed.candles);
   });
 
-  // Keyboard shortcuts
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') ui.closeSettings();
+  // Mode tabs (SMC vs TV)
+  document.getElementById('btn-mode-smc')?.addEventListener('click', () => switchChartMode('smc'));
+  document.getElementById('btn-mode-tv')?.addEventListener('click', () => switchChartMode('tv'));
+
+  // Notification button
+  document.getElementById('notif-btn')?.addEventListener('click', async () => {
+    const perm = await Notifications.requestPermission();
+    ui.toast(perm === 'granted' ? 'Notifications active ✓' : 'Notifications blocked', perm === 'granted' ? 'success' : 'warning');
   });
+
+  // Settings modal
+  document.getElementById('settings-btn')?.addEventListener('click', () => ui.openSettings());
+  document.getElementById('modal-close-btn')?.addEventListener('click', () => ui.closeSettings());
+  document.getElementById('modal-cancel-btn')?.addEventListener('click', () => ui.closeSettings());
+  document.getElementById('modal-save-btn')?.addEventListener('click', () => ui.saveSettings());
 }
 
-// ─── TradingView Widget ──────────────────────────────────────────
-function updateTVWidget(symbol, tf, market) {
-  const container = document.getElementById('tv-widget');
-  if (!container) return;
+function switchMarket(market) {
+  currentMarket = market;
+  Settings.setLastMarket(market);
 
-  // Convert symbol to TradingView format
-  let tvSymbol;
-  if (market === 'CRYPTO') {
-    tvSymbol = `BINANCE:${symbol}`;
+  document.getElementById('mkt-crypto')?.classList.toggle('active', market === 'CRYPTO');
+  document.getElementById('mkt-forex')?.classList.toggle('active', market === 'FOREX');
+
+  populateSymbolDropdown(market);
+  currentSymbol = market === 'CRYPTO' ? 'BTCUSDT' : 'EURUSD';
+  Settings.setLastSymbol(currentSymbol);
+  setDropdownValue('sym-select', currentSymbol);
+
+  loadMarketData(currentSymbol, currentTF, currentMarket);
+}
+
+function switchChartMode(mode) {
+  const mainChart = document.getElementById('main-chart');
+  const volChart = document.getElementById('vol-chart');
+  const tvFrame = document.getElementById('tv-widget-frame');
+  const btnSmc = document.getElementById('btn-mode-smc');
+  const btnTv = document.getElementById('btn-mode-tv');
+
+  if (mode === 'smc') {
+    mainChart.style.display = 'block';
+    volChart.style.display = 'block';
+    tvFrame.style.display = 'none';
+    btnSmc.classList.add('active');
+    btnTv.classList.remove('active');
   } else {
-    tvSymbol = `FX:${symbol}`;
+    mainChart.style.display = 'none';
+    volChart.style.display = 'none';
+    tvFrame.style.display = 'block';
+    btnTv.classList.add('active');
+    btnSmc.classList.remove('active');
+
+    // Embed TV widget
+    tvFrame.innerHTML = '';
+    const script = document.createElement('script');
+    script.src = 'https://s3.tradingview.com/tv.js';
+    script.onload = () => {
+      /* global TradingView */
+      if (typeof TradingView !== 'undefined') {
+        new TradingView.widget({
+          autosize: true,
+          symbol: currentMarket === 'CRYPTO' ? `BINANCE:${currentSymbol}` : `FX:${currentSymbol}`,
+          interval: currentTF === '1D' ? 'D' : currentTF,
+          timezone: 'Etc/UTC',
+          theme: 'dark',
+          style: '1',
+          container_id: 'tv-widget-frame',
+        });
+      }
+    };
+    tvFrame.appendChild(script);
   }
+}
 
-  // Convert TF to TV interval
-  const tvInterval = tf === '1D' ? 'D' : tf === '1W' ? 'W' : tf;
-  const tvTheme    = Settings.getTheme();
+// Global Nav switching functions
+window.switchNavTab = function (tab) {
+  activeNav = tab;
+  document.querySelectorAll('.nav-link').forEach((b) => b.classList.remove('active'));
+  document.getElementById(`nav-${tab}`)?.classList.add('active');
 
-  // Clear and re-create widget
-  container.innerHTML = '';
-  const script = document.createElement('script');
-  script.src   = 'https://s3.tradingview.com/tv.js';
-  script.async = true;
-  script.onload = () => {
-    /* global TradingView */
-    if (typeof TradingView !== 'undefined') {
-      new TradingView.widget({
-        autosize:           true,
-        symbol:             tvSymbol,
-        interval:           tvInterval,
-        timezone:           Intl.DateTimeFormat().resolvedOptions().timeZone,
-        theme:              tvTheme,
-        style:              '1',
-        locale:             'en',
-        toolbar_bg:         tvTheme === 'dark' ? '#0f1117' : '#ffffff',
-        enable_publishing:  false,
-        hide_top_toolbar:   false,
-        hide_legend:        false,
-        save_image:         false,
-        container_id:       'tv-inner',
-        allow_symbol_change: true,
-        studies: [
-          'RSI@tv-basicstudies',
-          'MACD@tv-basicstudies',
-        ],
-        withdateranges:     true,
-      });
+  const chartArea = document.getElementById('chart-area');
+  const sbView = document.getElementById('strategy-builder-view');
+
+  if (tab === 'strategy') {
+    chartArea.style.display = 'none';
+    sbView.style.display = 'flex';
+  } else {
+    chartArea.style.display = 'flex';
+    sbView.style.display = 'none';
+    if (tab === 'graded') {
+      window.switchSidebarTab('graded');
+    } else {
+      window.switchSidebarTab('lanes');
     }
-  };
-
-  const inner = document.createElement('div');
-  inner.id    = 'tv-inner';
-  inner.style.cssText = 'width:100%;height:100%';
-  container.appendChild(inner);
-  container.appendChild(script);
-}
-
-// ─── Tab Switching ───────────────────────────────────────────────
-function switchTab(tab) {
-  activeChartTab = tab;
-  const mainArea = document.getElementById('chart-area-main');
-  const tvArea   = document.getElementById('chart-area-tv');
-  const tabMain  = document.getElementById('tab-main');
-  const tabTv    = document.getElementById('tab-tv');
-
-  if (tab === 'main') {
-    mainArea?.style.setProperty('display', 'flex');
-    tvArea?.style.setProperty('display', 'none');
-    tabMain?.classList.add('active');
-    tabTv?.classList.remove('active');
-  } else {
-    mainArea?.style.setProperty('display', 'none');
-    tvArea?.style.setProperty('display', 'block');
-    tabTv?.classList.add('active');
-    tabMain?.classList.remove('active');
-    updateTVWidget(currentSymbol, currentTF, currentMarket);
   }
-}
+};
 
-// ─── UI Helpers ──────────────────────────────────────────────────
+window.switchSidebarTab = function (tab) {
+  const tabLanes = document.getElementById('sbtab-lanes');
+  const tabGraded = document.getElementById('sbtab-graded');
+  const cLanes = document.getElementById('sb-content-lanes');
+  const cGraded = document.getElementById('sb-content-graded');
+
+  if (tab === 'lanes') {
+    tabLanes?.classList.add('active');
+    tabGraded?.classList.remove('active');
+    if (cLanes) cLanes.style.display = 'flex';
+    if (cGraded) cGraded.style.display = 'none';
+  } else {
+    tabGraded?.classList.add('active');
+    tabLanes?.classList.remove('active');
+    if (cGraded) cGraded.style.display = 'flex';
+    if (cLanes) cLanes.style.display = 'none';
+  }
+};
+
+window.toast = function (msg, type = 'info') {
+  ui?.toast(msg, type);
+};
+
 function populateSymbolDropdown(market) {
-  const select  = document.getElementById('symbol-select');
-  if (!select) return;
-  const symbols = market === 'CRYPTO' ? CRYPTO_SYMBOLS : FOREX_SYMBOLS;
-  select.innerHTML = symbols.map(s => `<option value="${s.value}">${s.label}</option>`).join('');
-}
-
-function populateTFDropdown() {
-  const select = document.getElementById('tf-select');
-  if (!select) return;
-  select.innerHTML = TIMEFRAMES.map(tf => `<option value="${tf.value}">${tf.label}</option>`).join('');
+  const sel = document.getElementById('sym-select');
+  if (!sel) return;
+  const list = market === 'CRYPTO' ? CRYPTO_SYMBOLS : FOREX_SYMBOLS;
+  sel.innerHTML = list.map((s) => `<option value="${s.value}">${s.label}</option>`).join('');
 }
 
 function setDropdownValue(id, value) {
@@ -380,11 +323,4 @@ function setDropdownValue(id, value) {
   if (el) el.value = value;
 }
 
-function setMarketToggle(market) {
-  document.querySelectorAll('.market-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.market === market);
-  });
-}
-
-// ─── Boot ────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', init);

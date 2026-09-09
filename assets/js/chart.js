@@ -1,52 +1,47 @@
 /**
- * chart.js — TradingView Lightweight Charts v4 wrapper
+ * chart.js — Deeepr.ai-Inspired TradingView Lightweight Charts v4 Wrapper
  *
- * Handles:
- *  - Chart initialization (main + volume pane)
- *  - Candle + volume series rendering
- *  - SMC zone overlays (OB boxes, FVG boxes, S/R zones, equal H/L lines)
- *  - Buy/Sell signal arrow markers
- *  - Chart theme switching
- *  - Time-scale sync between main and volume chart
+ * Features:
+ *  - Obsidian Deep Void Theme (#03060f) with neon cyan crosshair
+ *  - Forward-projected shaded TP (emerald) and SL (ruby) forecast zones
+ *  - Floating level grip badges (TP, SL, Entry)
+ *  - Custom canvas primitives for Order Blocks and Fair Value Gaps
+ *  - Multi-timeframe synced volume pane
  */
 
-// ─── Zone Rectangle Primitive ────────────────────────────────────
-/**
- * A lightweight ISeriesPrimitive for drawing rectangular zones
- * (Order Blocks, FVGs, S/R zones) directly on the canvas.
- */
+// ─── Custom Canvas Primitive for Shaded Zones ─────────────────────
 class RectZonePrimitive {
-  constructor(top, bottom, startTime, endTime, fillColor, borderColor) {
-    this._top    = top;
+  constructor(top, bottom, startTime, endTime, fillColor, borderColor, label = '') {
+    this._top = top;
     this._bottom = bottom;
     this._startT = startTime;
-    this._endT   = endTime;
-    this._fill   = fillColor;
+    this._endT = endTime;
+    this._fill = fillColor;
     this._border = borderColor;
-    this._view   = null;
+    this._label = label;
+    this._view = null;
     this._series = null;
-    this._chart  = null;
+    this._chart = null;
   }
 
   attached({ chart, series }) {
-    this._chart  = chart;
+    this._chart = chart;
     this._series = series;
-    this._view   = new RectZoneView(this);
+    this._view = new RectZoneView(this);
   }
 
-  detached() { this._chart = null; this._series = null; this._view = null; }
+  detached() {
+    this._chart = null;
+    this._series = null;
+    this._view = null;
+  }
 
   updateAllViews() {
     if (this._view) this._view.update(this._chart, this._series);
   }
 
-  paneViews() { return this._view ? [this._view] : []; }
-
-  update({ top, bottom, startTime, endTime }) {
-    if (top    !== undefined) this._top    = top;
-    if (bottom !== undefined) this._bottom = bottom;
-    if (startTime !== undefined) this._startT = startTime;
-    if (endTime   !== undefined) this._endT   = endTime;
+  paneViews() {
+    return this._view ? [this._view] : [];
   }
 }
 
@@ -64,27 +59,26 @@ class RectZoneView {
     const y2 = series.priceToCoordinate(p._bottom);
     const x1 = chart.timeScale().timeToCoordinate(p._startT);
 
-    // If endTime provided use it; else extend to chart right edge
     let x2;
     if (p._endT) {
       x2 = chart.timeScale().timeToCoordinate(p._endT);
     } else {
-      // Extend zone to visible right edge
       const vr = chart.timeScale().getVisibleRange();
-      x2 = vr ? chart.timeScale().timeToCoordinate(vr.to) : x1 + 5000;
+      x2 = vr ? chart.timeScale().timeToCoordinate(vr.to) : (x1 ? x1 + 2000 : 2000);
     }
 
     if (y1 === null || y2 === null || x1 === null) {
       this._coords = null;
       return;
     }
-    this._coords = { x1, y1: Math.min(y1, y2), x2, y2: Math.max(y1, y2) };
+    this._coords = { x1, y1: Math.min(y1, y2), x2: x2 || x1 + 400, y2: Math.max(y1, y2) };
   }
 
   renderer() {
     const coords = this._coords;
-    const fill   = this._prim._fill;
+    const fill = this._prim._fill;
     const border = this._prim._border;
+    const label = this._prim._label;
 
     return {
       draw(target) {
@@ -93,15 +87,23 @@ class RectZoneView {
           const { x1, y1, x2, y2 } = coords;
           const rx1 = Math.round(x1 * hpr);
           const ry1 = Math.round(y1 * vpr);
-          const rw  = Math.round((x2 - x1) * hpr);
-          const rh  = Math.round((y2 - y1) * vpr);
+          const rw = Math.round((x2 - x1) * hpr);
+          const rh = Math.round((y2 - y1) * vpr);
+
           ctx.save();
           ctx.fillStyle = fill;
           ctx.fillRect(rx1, ry1, rw, rh);
+
           if (border) {
             ctx.strokeStyle = border;
-            ctx.lineWidth   = 1;
+            ctx.lineWidth = 1.2;
             ctx.strokeRect(rx1, ry1, rw, rh);
+          }
+
+          if (label && rw > 60 && rh > 14) {
+            ctx.fillStyle = border || '#ffffff';
+            ctx.font = `${Math.round(10 * vpr)}px 'JetBrains Mono', monospace`;
+            ctx.fillText(label, rx1 + 8 * hpr, ry1 + 14 * vpr);
           }
           ctx.restore();
         });
@@ -111,34 +113,33 @@ class RectZoneView {
 }
 
 // ─── ChartManager ────────────────────────────────────────────────
-
 export class ChartManager {
   constructor(mainContainerId, volContainerId) {
-    this._mainEl    = document.getElementById(mainContainerId);
-    this._volEl     = document.getElementById(volContainerId);
-    this._chart     = null;
-    this._volChart  = null;
-    this._candles   = null;
-    this._vol       = null;
-    this._markers   = [];
-    this._primitives = {}; // id → primitive instance
-    this._zoneLayer  = null; // series used to attach zone primitives
-    this._theme      = 'dark';
+    this._mainEl = document.getElementById(mainContainerId);
+    this._volEl = document.getElementById(volContainerId);
+    this._chart = null;
+    this._volChart = null;
+    this._candles = null;
+    this._vol = null;
+    this._markers = [];
+    this._primitives = {};
+    this._projectionPrimitives = [];
+    this._priceLines = [];
+    this._zoneLayer = null;
+    this._theme = 'dark';
   }
-
-  // ─── Initialization ───────────────────────────────────────────
 
   init(theme = 'dark') {
     this._theme = theme;
     const colors = this._colors(theme);
 
-    // Main chart
+    // Main Lightweight Chart
     this._chart = LightweightCharts.createChart(this._mainEl, {
       layout: {
         background: { type: 'solid', color: colors.bg },
         textColor: colors.text,
-        fontFamily: "'Inter', 'Segoe UI', sans-serif",
-        fontSize: 12,
+        fontFamily: "'Inter', -apple-system, sans-serif",
+        fontSize: 11,
       },
       grid: {
         vertLines: { color: colors.gridLine },
@@ -151,7 +152,7 @@ export class ChartManager {
       },
       rightPriceScale: {
         borderColor: colors.border,
-        scaleMargins: { top: 0.1, bottom: 0.15 },
+        scaleMargins: { top: 0.12, bottom: 0.14 },
       },
       timeScale: {
         borderColor: colors.border,
@@ -159,7 +160,7 @@ export class ChartManager {
         secondsVisible: false,
         tickMarkFormatter: (time) => {
           const d = new Date(time * 1000);
-          return `${d.getUTCMonth()+1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`;
+          return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
         },
       },
       handleScale: { axisPressedMouseMove: { time: true, price: true } },
@@ -167,29 +168,29 @@ export class ChartManager {
       autoSize: true,
     });
 
-    // Candlestick series
+    // Candlestick Series (Deeepr Neon Green & Red)
     this._candles = this._chart.addCandlestickSeries({
-      upColor:          colors.bullCandle,
-      downColor:        colors.bearCandle,
-      borderUpColor:    colors.bullCandle,
-      borderDownColor:  colors.bearCandle,
-      wickUpColor:      colors.bullCandle,
-      wickDownColor:    colors.bearCandle,
+      upColor: colors.bullCandle,
+      downColor: colors.bearCandle,
+      borderUpColor: colors.bullCandle,
+      borderDownColor: colors.bearCandle,
+      wickUpColor: colors.bullCandle,
+      wickDownColor: colors.bearCandle,
     });
 
-    // Invisible line series used as host for zone primitives
+    // Hidden Line Series to attach custom primitives
     this._zoneLayer = this._chart.addLineSeries({
-      color:         'transparent',
+      color: 'transparent',
       priceLineVisible: false,
       lastValueVisible: false,
       crosshairMarkerVisible: false,
     });
 
-    // Volume chart
+    // Synced Volume Subchart
     if (this._volEl) {
       this._volChart = LightweightCharts.createChart(this._volEl, {
         layout: { background: { type: 'solid', color: colors.bg }, textColor: colors.text },
-        grid:   { vertLines: { color: 'transparent' }, horzLines: { color: 'transparent' } },
+        grid: { vertLines: { color: 'transparent' }, horzLines: { color: 'transparent' } },
         rightPriceScale: { borderColor: colors.border, scaleMargins: { top: 0.1, bottom: 0 } },
         timeScale: { borderColor: colors.border, visible: false },
         crosshair: { vertLine: { color: colors.crosshair }, horzLine: { visible: false } },
@@ -197,44 +198,47 @@ export class ChartManager {
         handleScroll: false,
         autoSize: true,
       });
+
       this._vol = this._volChart.addHistogramSeries({
         priceFormat: { type: 'volume' },
         priceScaleId: '',
         color: colors.volBar,
       });
 
-      // Sync time scales
-      this._chart.timeScale().subscribeVisibleLogicalRangeChange(range => {
-        if (range) this._volChart.timeScale().setVisibleLogicalRange(range);
+      this._chart.timeScale().subscribeVisibleLogicalRangeChange(r => {
+        if (r) this._volChart.timeScale().setVisibleLogicalRange(r);
       });
-      this._volChart.timeScale().subscribeVisibleLogicalRangeChange(range => {
-        if (range) this._chart.timeScale().setVisibleLogicalRange(range);
+      this._volChart.timeScale().subscribeVisibleLogicalRangeChange(r => {
+        if (r) this._chart.timeScale().setVisibleLogicalRange(r);
       });
     }
 
-    // Responsive resize observer
-    this._resizeObserver = new ResizeObserver(() => this._chart.applyOptions({ autoSize: true }));
+    this._resizeObserver = new ResizeObserver(() => {
+      this._chart.applyOptions({ autoSize: true });
+      this._volChart?.applyOptions({ autoSize: true });
+    });
     this._resizeObserver.observe(this._mainEl);
   }
 
-  // ─── Data Loading ─────────────────────────────────────────────
-
+  // ─── Candlestick Data ──────────────────────────────────────────
   setHistory(candles) {
     if (!this._candles) return;
-    // Remove duplicate times and sort
     const unique = [];
-    const seen   = new Set();
+    const seen = new Set();
     for (const c of candles) {
-      if (!seen.has(c.time)) { seen.add(c.time); unique.push(c); }
+      if (!seen.has(c.time)) {
+        seen.add(c.time);
+        unique.push(c);
+      }
     }
     unique.sort((a, b) => a.time - b.time);
 
     this._candles.setData(unique);
     if (this._vol) {
       this._vol.setData(unique.map(c => ({
-        time:  c.time,
+        time: c.time,
         value: c.volume || 0,
-        color: c.close >= c.open ? 'rgba(38,166,154,0.5)' : 'rgba(239,83,80,0.5)',
+        color: c.close >= c.open ? 'rgba(0, 240, 144, 0.45)' : 'rgba(255, 51, 102, 0.45)',
       })));
     }
     this._chart.timeScale().fitContent();
@@ -245,25 +249,164 @@ export class ChartManager {
     this._candles.update(candle);
     if (this._vol && candle.volume != null) {
       this._vol.update({
-        time:  candle.time,
+        time: candle.time,
         value: candle.volume,
-        color: candle.close >= candle.open ? 'rgba(38,166,154,0.5)' : 'rgba(239,83,80,0.5)',
+        color: candle.close >= candle.open ? 'rgba(0, 240, 144, 0.45)' : 'rgba(255, 51, 102, 0.45)',
       });
     }
   }
 
-  // ─── Signal Markers ───────────────────────────────────────────
+  // ─── Deeepr Forward-Projected TP / SL Shaded Zones ──────────────
+  drawProjectionZones({ entry, target, stop, verdict, startTime }) {
+    if (!this._zoneLayer || !target || !stop) return;
 
+    // Clear previous projections
+    for (const p of this._projectionPrimitives) {
+      try { this._zoneLayer.detachPrimitive(p); } catch {}
+    }
+    this._projectionPrimitives = [];
+
+    const futureTime = (startTime || Math.floor(Date.now() / 1000)) + 3600 * 30; // 30 bars into future
+
+    if (verdict === 'LONG') {
+      // 1. Target (TP) Green Shaded Box: [entry -> target]
+      const tpPrim = new RectZonePrimitive(
+        target,
+        entry,
+        startTime,
+        futureTime,
+        'rgba(0, 240, 144, 0.16)', // translucent emerald
+        '#00f090',
+        `TP: ${target.toFixed(2)}`
+      );
+      // 2. Stop (SL) Red Shaded Box: [stop -> entry]
+      const slPrim = new RectZonePrimitive(
+        entry,
+        stop,
+        startTime,
+        futureTime,
+        'rgba(255, 51, 102, 0.16)', // translucent ruby
+        '#ff3366',
+        `SL: ${stop.toFixed(2)}`
+      );
+
+      this._zoneLayer.attachPrimitive(tpPrim);
+      this._zoneLayer.attachPrimitive(slPrim);
+      this._projectionPrimitives.push(tpPrim, slPrim);
+    } else if (verdict === 'SHORT') {
+      // 1. Target (TP) Green Box: [target -> entry]
+      const tpPrim = new RectZonePrimitive(
+        entry,
+        target,
+        startTime,
+        futureTime,
+        'rgba(0, 240, 144, 0.16)',
+        '#00f090',
+        `TP: ${target.toFixed(2)}`
+      );
+      // 2. Stop (SL) Red Box: [entry -> stop]
+      const slPrim = new RectZonePrimitive(
+        stop,
+        entry,
+        startTime,
+        futureTime,
+        'rgba(255, 51, 102, 0.16)',
+        '#ff3366',
+        `SL: ${stop.toFixed(2)}`
+      );
+
+      this._zoneLayer.attachPrimitive(tpPrim);
+      this._zoneLayer.attachPrimitive(slPrim);
+      this._projectionPrimitives.push(tpPrim, slPrim);
+    }
+  }
+
+  clearProjectionZones() {
+    for (const p of this._projectionPrimitives) {
+      try { this._zoneLayer.detachPrimitive(p); } catch {}
+    }
+    this._projectionPrimitives = [];
+  }
+
+  // ─── SMC Zones (Order Blocks, FVGs, S/R) ─────────────────────────
+  drawSMCZones(smcResult) {
+    if (!this._zoneLayer || !smcResult) return;
+
+    // Detach old primitives
+    for (const prim of Object.values(this._primitives)) {
+      try { this._zoneLayer.detachPrimitive(prim); } catch {}
+    }
+    this._primitives = {};
+
+    const { orderBlocks = [], fvgs = [], equalHighs = [], equalLows = [] } = smcResult;
+    const futureTime = Math.floor(Date.now() / 1000) + 3600 * 20;
+
+    // Order Blocks
+    orderBlocks.slice(-6).forEach((ob, i) => {
+      const isBull = ob.type === 'BULLISH_OB';
+      const color = isBull ? 'rgba(0, 212, 255, 0.14)' : 'rgba(168, 85, 247, 0.14)';
+      const border = isBull ? '#00d4ff' : '#a855f7';
+      const label = isBull ? 'BULL OB' : 'BEAR OB';
+
+      const prim = new RectZonePrimitive(ob.top, ob.bottom, ob.time, futureTime, color, border, label);
+      const id = `ob_${i}`;
+      this._primitives[id] = prim;
+      this._zoneLayer.attachPrimitive(prim);
+    });
+
+    // FVGs
+    fvgs.slice(-5).forEach((fvg, i) => {
+      const isBull = fvg.type === 'BULLISH_FVG';
+      const color = isBull ? 'rgba(255, 193, 7, 0.10)' : 'rgba(233, 30, 99, 0.10)';
+      const border = isBull ? '#ffc107' : '#e91e63';
+
+      const prim = new RectZonePrimitive(fvg.top, fvg.bottom, fvg.time, futureTime, color, border, 'FVG');
+      const id = `fvg_${i}`;
+      this._primitives[id] = prim;
+      this._zoneLayer.attachPrimitive(prim);
+    });
+
+    // Equal Highs / Lows Price Lines
+    for (const pl of this._priceLines) {
+      try { this._candles.removePriceLine(pl); } catch {}
+    }
+    this._priceLines = [];
+
+    equalHighs.slice(0, 3).forEach(z => {
+      const pl = this._candles.createPriceLine({
+        price: z.price,
+        color: 'rgba(255, 51, 102, 0.75)',
+        lineWidth: 1,
+        lineStyle: LightweightCharts.LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: 'EQH',
+      });
+      this._priceLines.push(pl);
+    });
+
+    equalLows.slice(0, 3).forEach(z => {
+      const pl = this._candles.createPriceLine({
+        price: z.price,
+        color: 'rgba(0, 240, 144, 0.75)',
+        lineWidth: 1,
+        lineStyle: LightweightCharts.LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: 'EQL',
+      });
+      this._priceLines.push(pl);
+    });
+  }
+
+  // ─── Signal Markers ──────────────────────────────────────────────
   addSignalMarker({ time, type, text = '' }) {
     this._markers.push({
       time,
-      position:  type === 'BUY' ? 'belowBar' : 'aboveBar',
-      color:     type === 'BUY' ? '#26a69a'  : '#ef5350',
-      shape:     type === 'BUY' ? 'arrowUp'  : 'arrowDown',
-      text:      text || type,
-      size:      2,
+      position: type === 'LONG' || type === 'BUY' ? 'belowBar' : 'aboveBar',
+      color: type === 'LONG' || type === 'BUY' ? '#00f090' : '#ff3366',
+      shape: type === 'LONG' || type === 'BUY' ? 'arrowUp' : 'arrowDown',
+      text: text || type,
+      size: 2,
     });
-    // Keep last 50 markers
     if (this._markers.length > 50) this._markers.shift();
     this._candles.setMarkers(this._markers);
   }
@@ -273,133 +416,57 @@ export class ChartManager {
     this._candles?.setMarkers([]);
   }
 
-  // ─── Zone Overlays ────────────────────────────────────────────
-
-  /**
-   * Draw all SMC zones from an SMCResult.
-   * Clears previous zones before drawing.
-   */
-  drawSMCZones(smcResult) {
-    if (!this._zoneLayer) return;
-
-    // Detach old primitives
-    for (const prim of Object.values(this._primitives)) {
-      try { this._zoneLayer.detachPrimitive(prim); } catch {}
-    }
-    this._primitives = {};
-
-    const {
-      orderBlocks, fvgs, srZones, equalHighs, equalLows,
-      swingHighs, swingLows,
-    } = smcResult;
-
-    const canvasEnd = this._futureTime(50); // extend zones 50 bars into future
-
-    // Order Blocks
-    orderBlocks.forEach((ob, i) => {
-      const color  = ob.type === 'BULLISH_OB'
-        ? 'rgba(38,166,154,0.18)'
-        : 'rgba(239,83,80,0.18)';
-      const border = ob.type === 'BULLISH_OB' ? '#26a69a' : '#ef5350';
-      const prim   = new RectZonePrimitive(ob.top, ob.bottom, ob.time, canvasEnd, color, border);
-      const id     = `ob_${i}`;
-      this._primitives[id] = prim;
-      this._zoneLayer.attachPrimitive(prim);
-    });
-
-    // Fair Value Gaps
-    fvgs.forEach((fvg, i) => {
-      const color  = fvg.type === 'BULLISH_FVG'
-        ? 'rgba(255,193,7,0.12)'
-        : 'rgba(156,39,176,0.12)';
-      const border = fvg.type === 'BULLISH_FVG' ? '#ffc107' : '#9c27b0';
-      const prim   = new RectZonePrimitive(fvg.top, fvg.bottom, fvg.time, canvasEnd, color, border);
-      const id     = `fvg_${i}`;
-      this._primitives[id] = prim;
-      this._zoneLayer.attachPrimitive(prim);
-    });
-
-    // S/R Zones (top 6)
-    srZones.slice(0, 6).forEach((zone, i) => {
-      const alpha  = Math.min(0.15, zone.strength * 0.025);
-      const color  = zone.type === 'RESISTANCE'
-        ? `rgba(239,83,80,${alpha})`
-        : `rgba(38,166,154,${alpha})`;
-      const border = zone.type === 'RESISTANCE' ? 'rgba(239,83,80,0.4)' : 'rgba(38,166,154,0.4)';
-      const prim   = new RectZonePrimitive(zone.top, zone.bottom, zone.times[0], canvasEnd, color, border);
-      const id     = `sr_${i}`;
-      this._primitives[id] = prim;
-      this._zoneLayer.attachPrimitive(prim);
-    });
-
-    // Equal High lines (dashed price lines)
-    this._priceLinesCache = this._priceLinesCache || [];
-    for (const pl of this._priceLinesCache) {
-      try { this._candles.removePriceLine(pl); } catch {}
-    }
-    this._priceLinesCache = [];
-
-    equalHighs.slice(0, 5).forEach(z => {
-      const pl = this._candles.createPriceLine({
-        price: z.price,
-        color: 'rgba(239,83,80,0.7)',
-        lineWidth: 1,
-        lineStyle: LightweightCharts.LineStyle.Dashed,
-        axisLabelVisible: true,
-        title: 'EQH',
-      });
-      this._priceLinesCache.push(pl);
-    });
-
-    equalLows.slice(0, 5).forEach(z => {
-      const pl = this._candles.createPriceLine({
-        price: z.price,
-        color: 'rgba(38,166,154,0.7)',
-        lineWidth: 1,
-        lineStyle: LightweightCharts.LineStyle.Dashed,
-        axisLabelVisible: true,
-        title: 'EQL',
-      });
-      this._priceLinesCache.push(pl);
-    });
-  }
-
-  // ─── SL / TP Lines ───────────────────────────────────────────
-
-  showSLTPLines({ stopLoss, takeProfit, entryPrice }) {
+  // ─── SL / TP Level Price Lines ────────────────────────────────────
+  showSLTPLines({ entryPrice, stopLoss, takeProfit }) {
     if (this._slLine) try { this._candles.removePriceLine(this._slLine); } catch {}
     if (this._tpLine) try { this._candles.removePriceLine(this._tpLine); } catch {}
     if (this._entLine) try { this._candles.removePriceLine(this._entLine); } catch {}
 
-    if (entryPrice) this._entLine = this._candles.createPriceLine({
-      price: entryPrice, color: '#ffffff', lineWidth: 1,
-      lineStyle: LightweightCharts.LineStyle.Solid, axisLabelVisible: true, title: 'Entry',
-    });
-    if (stopLoss) this._slLine = this._candles.createPriceLine({
-      price: stopLoss, color: '#ef5350', lineWidth: 1,
-      lineStyle: LightweightCharts.LineStyle.Dotted, axisLabelVisible: true, title: 'SL',
-    });
-    if (takeProfit) this._tpLine = this._candles.createPriceLine({
-      price: takeProfit, color: '#26a69a', lineWidth: 1,
-      lineStyle: LightweightCharts.LineStyle.Dotted, axisLabelVisible: true, title: 'TP',
-    });
+    if (entryPrice) {
+      this._entLine = this._candles.createPriceLine({
+        price: entryPrice,
+        color: '#ffffff',
+        lineWidth: 1,
+        lineStyle: LightweightCharts.LineStyle.Solid,
+        axisLabelVisible: true,
+        title: 'Entry',
+      });
+    }
+    if (stopLoss) {
+      this._slLine = this._candles.createPriceLine({
+        price: stopLoss,
+        color: '#ff3366',
+        lineWidth: 1,
+        lineStyle: LightweightCharts.LineStyle.Dotted,
+        axisLabelVisible: true,
+        title: 'SL',
+      });
+    }
+    if (takeProfit) {
+      this._tpLine = this._candles.createPriceLine({
+        price: takeProfit,
+        color: '#00f090',
+        lineWidth: 1,
+        lineStyle: LightweightCharts.LineStyle.Dotted,
+        axisLabelVisible: true,
+        title: 'TP',
+      });
+    }
   }
 
   clearSLTPLines() {
-    if (this._slLine)  try { this._candles.removePriceLine(this._slLine);  } catch {}
-    if (this._tpLine)  try { this._candles.removePriceLine(this._tpLine);  } catch {}
+    if (this._slLine) try { this._candles.removePriceLine(this._slLine); } catch {}
+    if (this._tpLine) try { this._candles.removePriceLine(this._tpLine); } catch {}
     if (this._entLine) try { this._candles.removePriceLine(this._entLine); } catch {}
     this._slLine = this._tpLine = this._entLine = null;
   }
-
-  // ─── Theme Switching ──────────────────────────────────────────
 
   setTheme(theme) {
     this._theme = theme;
     const colors = this._colors(theme);
     this._chart.applyOptions({
       layout: { background: { color: colors.bg }, textColor: colors.text },
-      grid:   { vertLines: { color: colors.gridLine }, horzLines: { color: colors.gridLine } },
+      grid: { vertLines: { color: colors.gridLine }, horzLines: { color: colors.gridLine } },
       crosshair: { vertLine: { labelBackgroundColor: colors.labelBg }, horzLine: { labelBackgroundColor: colors.labelBg } },
     });
     this._volChart?.applyOptions({
@@ -407,46 +474,27 @@ export class ChartManager {
     });
   }
 
-  // ─── Utilities ────────────────────────────────────────────────
-
-  _futureTime(bars = 50) {
-    // Estimate future time based on last visible range
-    const vr = this._chart?.timeScale().getVisibleRange();
-    if (vr) return vr.to + bars * 3600; // rough offset
-    return Math.floor(Date.now() / 1000) + bars * 3600;
-  }
-
-  fitContent() {
-    this._chart?.timeScale().fitContent();
-  }
-
-  destroy() {
-    this._resizeObserver?.disconnect();
-    this._chart?.remove();
-    this._volChart?.remove();
-  }
-
   _colors(theme) {
     return theme === 'dark' ? {
-      bg:         '#0f1117',
-      text:       '#d1d4dc',
-      gridLine:   '#1e2232',
-      border:     '#2a2d3a',
-      crosshair:  '#485c7b',
-      labelBg:    '#1e2232',
-      bullCandle: '#26a69a',
-      bearCandle: '#ef5350',
-      volBar:     'rgba(100,120,180,0.4)',
+      bg: '#03060f', // Deeepr Obsidian Void
+      text: '#8f9bb3',
+      gridLine: 'rgba(255, 255, 255, 0.03)',
+      border: '#141c2e',
+      crosshair: '#00d4ff', // Deeepr Neon Cyan
+      labelBg: '#0b1120',
+      bullCandle: '#00f090', // Deeepr Emerald Green
+      bearCandle: '#ff3366', // Deeepr Ruby Red
+      volBar: 'rgba(0, 212, 255, 0.35)',
     } : {
-      bg:         '#ffffff',
-      text:       '#1a1a2e',
-      gridLine:   '#f0f3fa',
-      border:     '#d0d4e0',
-      crosshair:  '#9098a3',
-      labelBg:    '#f0f3fa',
-      bullCandle: '#0d9488',
-      bearCandle: '#dc2626',
-      volBar:     'rgba(60,100,180,0.3)',
+      bg: '#f8fafc',
+      text: '#334155',
+      gridLine: '#e2e8f0',
+      border: '#cbd5e1',
+      crosshair: '#0284c7',
+      labelBg: '#f1f5f9',
+      bullCandle: '#10b981',
+      bearCandle: '#ef4444',
+      volBar: 'rgba(2, 132, 199, 0.35)',
     };
   }
 }

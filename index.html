@@ -1,277 +1,338 @@
-<!-- Trading Signal AI — Main Dashboard
-     GitHub: https://github.com/yashwanth637/trading-signal-ai
-     Live:   https://yashwanth637.github.io/trading-signal-ai/
--->
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Trading Signal AI — SMC Analysis</title>
-  <meta name="description" content="AI-powered trading signal generator using Smart Money Concepts — Order Blocks, FVG, BOS, Liquidity Sweeps" />
+  <title>Deeepr Signal AI — 4-Lane Real-Time Market Intelligence</title>
+  <meta name="description" content="Precision trading signals with 4-lane reconciliation: Technical, Flow, News/AI, and Macro. One verdict per coin with exact levels." />
 
-  <!-- Fonts -->
+  <!-- Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
 
-  <!-- Styles -->
+  <!-- Stylesheet -->
   <link rel="stylesheet" href="assets/css/main.css" />
 
-  <!-- TradingView Lightweight Charts v4 (CDN) -->
+  <!-- TradingView Lightweight Charts v4 CDN -->
   <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
 
-  <!-- Favicon inline SVG -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%234f7fff'/><polyline points='4,22 10,14 16,18 22,8 28,12' stroke='white' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/><circle cx='22' cy='8' r='2.5' fill='%2326a69a'/></svg>" />
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%2303060f'/><rect x='4' y='6' width='24' height='3' fill='%2300d4ff'/><rect x='8' y='12' width='16' height='3' fill='%2300d4ff'/><rect x='12' y='18' width='8' height='3' fill='%2300d4ff'/><circle cx='16' cy='25' r='2' fill='%23a855f7'/></svg>" />
 </head>
 
 <body>
 <div id="app">
 
-  <!-- ─── TOP BAR ──────────────────────────────────────────────── -->
-  <header id="topbar">
-    <!-- Logo -->
-    <div class="logo">
-      <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <rect width="32" height="32" rx="6" fill="#4f7fff"/>
-        <polyline points="4,22 10,14 16,18 22,8 28,12" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="22" cy="8" r="2.5" fill="#26a69a"/>
-      </svg>
-      <div>
-        <div>Signal AI</div>
-        <div class="logo-sub">SMC Engine</div>
+  <!-- ─── TOP NAVBAR ─────────────────────────────────────────────── -->
+  <header id="navbar">
+    <!-- Brand -->
+    <a href="#" class="brand" aria-label="Deeepr Signal AI">
+      <div class="brand-bars">
+        <div class="brand-bar"></div>
+        <div class="brand-bar"></div>
+        <div class="brand-bar"></div>
+        <div class="brand-dot"></div>
       </div>
+      <span>dee<span class="brand-accent">e</span>pr<span class="brand-accent">.</span>ai</span>
+    </a>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-links">
+      <button class="nav-link active" id="nav-terminal" onclick="switchNavTab('terminal')">Terminal</button>
+      <button class="nav-link" id="nav-strategy" onclick="switchNavTab('strategy')">Strategy Builder</button>
+      <button class="nav-link" id="nav-graded" onclick="switchNavTab('graded')">Graded Calls</button>
+    </nav>
+
+    <!-- Market Selector Toggle -->
+    <div class="mkt-toggle">
+      <button class="mkt-btn active" data-market="CRYPTO" id="mkt-crypto">Crypto</button>
+      <button class="mkt-btn" data-market="FOREX" id="mkt-forex">Forex</button>
     </div>
 
-    <!-- Market toggle -->
-    <div class="market-btns">
-      <button class="market-btn active" data-market="CRYPTO" title="Cryptocurrency pairs">Crypto</button>
-      <button class="market-btn"        data-market="FOREX"  title="Forex pairs">Forex</button>
-    </div>
+    <!-- Symbol Dropdown -->
+    <select id="sym-select" title="Trading Pair"></select>
 
-    <!-- Symbol select -->
-    <select id="symbol-select" title="Select trading pair"></select>
-
-    <!-- Custom symbol input -->
-    <input id="symbol-input" type="text" placeholder="Custom…" maxlength="12" title="Type any symbol and press Enter" />
-
-    <!-- Price ticker -->
-    <div id="price-ticker">
-      <span class="tick-symbol">—</span>
-      <span class="tick-price">—</span>
+    <!-- Real-time Ticker -->
+    <div class="ticker-display">
+      <span class="ticker-price" id="ticker-price">—</span>
+      <span class="ticker-chg pos" id="ticker-chg">—</span>
     </div>
 
     <div class="spacer"></div>
 
-    <!-- Notification permission -->
-    <button class="icon-btn" id="notif-btn" title="Enable browser notifications">🔔</button>
+    <!-- Notification Button -->
+    <button class="icon-btn" id="notif-btn" title="Push Alerts">🔔</button>
 
-    <!-- Analyze Now -->
-    <button id="analyze-btn" title="Run SMC analysis on current data">⚡ Analyze</button>
+    <!-- Deeepr Analyze Button -->
+    <button class="action-btn" id="analyze-btn" title="Run 4-Lane Real-Time Analysis">
+      <span>⚡</span>
+      <span>Analyze</span>
+    </button>
 
-    <!-- Theme toggle -->
-    <button class="icon-btn" id="theme-toggle" title="Toggle dark/light theme">☀</button>
+    <!-- Theme Toggle -->
+    <button class="icon-btn" id="theme-btn" title="Toggle Theme">☀</button>
 
-    <!-- Settings -->
-    <button class="icon-btn" id="settings-btn" title="Settings — API keys, thresholds">⚙</button>
+    <!-- Settings Gear -->
+    <button class="icon-btn" id="settings-btn" title="Configure API Keys & Parameters">⚙</button>
   </header>
 
-  <!-- ─── TF + CHART TAB BAR ───────────────────────────────────── -->
-  <div id="tf-tabbar">
-    <!-- Timeframe buttons -->
-    <button class="tf-btn" data-tf="1">1m</button>
-    <button class="tf-btn" data-tf="3">3m</button>
-    <button class="tf-btn" data-tf="5">5m</button>
-    <button class="tf-btn" data-tf="15">15m</button>
-    <button class="tf-btn" data-tf="30">30m</button>
-    <button class="tf-btn active" data-tf="60">1H</button>
-    <button class="tf-btn" data-tf="120">2H</button>
-    <button class="tf-btn" data-tf="240">4H</button>
-    <button class="tf-btn" data-tf="720">12H</button>
-    <button class="tf-btn" data-tf="1D">1D</button>
-    <button class="tf-btn" data-tf="1W">1W</button>
+  <!-- ─── HERO VERDICT & LEVELS STRIP (DEEEPR SIGNATURE) ─────────── -->
+  <section id="hero-verdict-bar">
+    <!-- Verdict Status Pill -->
+    <div class="verdict-badge wait" id="hero-verdict-pill">
+      <span>⏸</span>
+      <span id="hero-verdict-text">WAIT</span>
+    </div>
 
-    <div class="tab-divider"></div>
+    <!-- Agreement Indicator -->
+    <div class="agreement-pill">
+      <span class="pulse-dot wait" id="hero-pulse-dot"></span>
+      <span id="hero-agreement-text">Lanes analyzing…</span>
+    </div>
 
-    <!-- Chart tab toggle -->
-    <button class="chart-tab-btn active" id="tab-main" title="Lightweight Charts (SMC overlays)">📊 SMC Chart</button>
-    <button class="chart-tab-btn"        id="tab-tv"   title="Full TradingView chart">📈 TV Chart</button>
+    <!-- 4-Lane Micro Badges -->
+    <div class="lane-tags" id="hero-lane-tags">
+      <span class="lane-tag" id="tag-tech">TECH</span>
+      <span class="lane-tag" id="tag-flow">FLOW</span>
+      <span class="lane-tag" id="tag-news">NEWS</span>
+      <span class="lane-tag" id="tag-macro">MACRO</span>
+    </div>
 
-    <div class="tab-divider"></div>
+    <!-- Exact Mathematical Levels -->
+    <div class="hero-levels" id="hero-levels">
+      <div class="hero-lvl"><span class="k">Entry</span><span class="v" id="hl-entry">—</span></div>
+      <div class="hero-lvl"><span class="k">Target</span><span class="v tp" id="hl-target">—</span></div>
+      <div class="hero-lvl"><span class="k">Stop</span><span class="v sl" id="hl-stop">—</span></div>
+      <div class="hero-lvl"><span class="k">R:R</span><span class="v" id="hl-rr">—</span></div>
+    </div>
+  </section>
 
-    <!-- HTF Bias -->
-    <span class="htf-label">HTF Bias:</span>
-    <select id="htf-bias" title="Set higher-timeframe trend bias for signal filtering">
-      <option value="NEUTRAL">Neutral</option>
-      <option value="BULLISH">Bullish</option>
-      <option value="BEARISH">Bearish</option>
-    </select>
-  </div>
-
-  <!-- ─── MAIN CHART AREA ──────────────────────────────────────── -->
+  <!-- ─── CHART WORKSPACE ────────────────────────────────────────── -->
   <main id="chart-area">
-    <!-- LW Charts tab -->
-    <div id="chart-area-main" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
-      <div id="main-chart"></div>
-      <div id="vol-chart"></div>
+    <!-- Timeframe & Chart Style Chips -->
+    <div class="chart-header-tabs">
+      <button class="tf-chip" data-tf="1">1m</button>
+      <button class="tf-chip" data-tf="5">5m</button>
+      <button class="tf-chip" data-tf="15">15m</button>
+      <button class="tf-chip" data-tf="30">30m</button>
+      <button class="tf-chip active" data-tf="60">1h</button>
+      <button class="tf-chip" data-tf="240">4h</button>
+      <button class="tf-chip" data-tf="1D">1d</button>
+
+      <div style="width:1px;height:16px;background:var(--border);margin:0 6px;"></div>
+
+      <button class="chart-mode-btn active" id="btn-mode-smc">📊 SMC Projection Chart</button>
+      <button class="chart-mode-btn" id="btn-mode-tv">📈 TradingView Widget</button>
+
+      <span class="spacer"></span>
+      <span style="font-size:11px;color:var(--text-3);margin-right:4px;">HTF Bias:</span>
+      <select id="htf-bias-sel" style="background:var(--input);color:var(--text-2);border:1px solid var(--border);border-radius:3px;font-size:11px;padding:2px 6px;">
+        <option value="NEUTRAL">Neutral</option>
+        <option value="BULLISH">Bullish</option>
+        <option value="BEARISH">Bearish</option>
+      </select>
     </div>
 
-    <!-- TradingView Widget tab -->
-    <div id="chart-area-tv" style="display:none;flex:1;overflow:hidden;">
-      <div id="tv-widget" style="width:100%;height:100%;"></div>
-    </div>
+    <!-- Main Lightweight Chart Container -->
+    <div id="main-chart"></div>
+
+    <!-- Synced Volume Histogram Pane -->
+    <div id="vol-chart"></div>
+
+    <!-- TradingView Widget Frame (Hidden by default) -->
+    <div id="tv-widget-frame" style="display:none;width:100%;height:100%;"></div>
   </main>
 
-  <!-- ─── SIDEBAR ──────────────────────────────────────────────── -->
-  <aside id="sidebar">
-    <!-- Header -->
-    <div class="sidebar-header">
-      <span class="sidebar-title">Signals</span>
-      <span id="signal-count">0</span>
+  <!-- ─── STRATEGY BUILDER OVERLAY VIEW ──────────────────────────── -->
+  <section id="strategy-builder-view">
+    <div>
+      <h1 class="sb-hero-title">Plain English in. <span style="color:var(--accent)">Real rules out.</span></h1>
+      <p class="sb-hero-sub">Describe your setup in natural words. The engine compiles it into quantitative execution rules and backtests on real candles.</p>
     </div>
 
-    <!-- Signal feed -->
-    <div id="signal-list">
-      <!-- Signal cards injected here by ui.js -->
-      <div style="padding:20px;text-align:center;color:var(--text-faint);font-size:12px;">
-        Waiting for signals…<br>
-        <span style="font-size:10px;">Select a symbol and timeframe to begin.</span>
+    <!-- Prompt Box -->
+    <div class="prompt-box">
+      <input type="text" id="strategy-prompt-input" class="prompt-input" placeholder="e.g. Buy BTC on the 1h when RSI is under 30 and price holds the 200 EMA with 2R target" />
+      <button class="action-btn" id="btn-compile-strategy">Build & Backtest</button>
+    </div>
+
+    <!-- Compiled Rules Card -->
+    <div class="compiled-box" id="strategy-compiled-box" style="display:none;">
+      <div class="compiled-title">Compiled Strategy Rules</div>
+      <div id="strategy-rules-list" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </div>
+
+    <!-- Backtest Performance Stats -->
+    <div id="strategy-backtest-results" style="display:none;flex-direction:column;gap:12px;">
+      <div class="bt-stats-grid">
+        <div class="bt-stat-card">
+          <div class="bt-stat-num" id="bt-winrate" style="color:var(--pos)">—%</div>
+          <div class="bt-stat-lbl">Win Rate</div>
+        </div>
+        <div class="bt-stat-card">
+          <div class="bt-stat-num" id="bt-profitfactor" style="color:var(--accent)">—</div>
+          <div class="bt-stat-lbl">Profit Factor</div>
+        </div>
+        <div class="bt-stat-card">
+          <div class="bt-stat-num" id="bt-drawdown" style="color:var(--neg)">—%</div>
+          <div class="bt-stat-lbl">Max Drawdown</div>
+        </div>
+        <div class="bt-stat-card">
+          <div class="bt-stat-num" id="bt-trades">—</div>
+          <div class="bt-stat-lbl">Total Trades</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:10px;">
+        <button class="action-btn" onclick="toast('Paper trading simulated! Forward testing enabled.','success')">🚀 Paper Trade This Setup</button>
+        <button class="icon-btn" style="width:auto;padding:0 14px;font-size:12px;" onclick="toast('Alert configured for live market triggers!','success')">Set Telegram Alert</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── SIDEBAR: 4-LANE BREAKDOWN & GRADED CALLS ────────────────── -->
+  <aside id="sidebar">
+    <!-- Tab Strip -->
+    <div class="sb-tab-strip">
+      <div class="sb-tab active" id="sbtab-lanes" onclick="switchSidebarTab('lanes')">4-Lane Analyze</div>
+      <div class="sb-tab" id="sbtab-graded" onclick="switchSidebarTab('graded')">Graded Calls</div>
+    </div>
+
+    <!-- 4-Lane View Panel -->
+    <div class="sb-content" id="sb-content-lanes">
+      <!-- Technical Lane Card -->
+      <div class="lane-card">
+        <div class="lane-head">
+          <div class="lane-id"><span class="lane-letter">T</span> Technical (SMC)</div>
+          <span class="status-chip neu" id="lc-tech-status">Neutral</span>
+        </div>
+        <div class="lane-read" id="lc-tech-read">Analyzing swing points, BOS/CHoCH, and Order Blocks…</div>
+      </div>
+
+      <!-- Flow Lane Card -->
+      <div class="lane-card">
+        <div class="lane-head">
+          <div class="lane-id"><span class="lane-letter">F</span> Order Flow (Delta)</div>
+          <span class="status-chip neu" id="lc-flow-status">Neutral</span>
+        </div>
+        <div class="lane-read" id="lc-flow-read">Reading spot buying vs selling pressure across candles…</div>
+      </div>
+
+      <!-- News / AI Lane Card -->
+      <div class="lane-card">
+        <div class="lane-head">
+          <div class="lane-id"><span class="lane-letter">N</span> News & Catalyst</div>
+          <span class="status-chip neu" id="lc-news-status">Neutral</span>
+        </div>
+        <div class="lane-read" id="lc-news-read">Scanning macro narrative and momentum sentiment…</div>
+      </div>
+
+      <!-- Macro Lane Card -->
+      <div class="lane-card">
+        <div class="lane-head">
+          <div class="lane-id"><span class="lane-letter">M</span> Macro & Session</div>
+          <span class="status-chip neu" id="lc-macro-status">Mixed</span>
+        </div>
+        <div class="lane-read" id="lc-macro-read">Tracking session killzone liquidity and ATR volatility…</div>
+      </div>
+
+      <!-- Verdict Summary Banner -->
+      <div id="lane-verdict-summary" style="padding:10px;border-radius:var(--radius);background:var(--card);border:1px solid var(--border);font-size:11px;color:var(--text-2);line-height:1.6;">
+        <span style="font-weight:700;color:var(--accent);">Decision Engine:</span>
+        <span id="lane-verdict-desc">Evaluating 4 lanes for 3-lane consensus…</span>
       </div>
     </div>
 
-    <!-- Analysis panel -->
-    <div id="analysis-panel"></div>
+    <!-- Graded Calls View Panel -->
+    <div class="sb-content" id="sb-content-graded" style="display:none;">
+      <!-- Scorecard Summary -->
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:10px;display:flex;justify-content:space-around;text-align:center;">
+        <div>
+          <div style="font-size:16px;font-weight:800;font-family:var(--mono);color:var(--pos);" id="gc-winrate">0%</div>
+          <div style="font-size:9px;color:var(--text-3);text-transform:uppercase;">Win Rate</div>
+        </div>
+        <div>
+          <div style="font-size:16px;font-weight:800;font-family:var(--mono);color:var(--pos);" id="gc-targets">0</div>
+          <div style="font-size:9px;color:var(--text-3);text-transform:uppercase;">Target Hit</div>
+        </div>
+        <div>
+          <div style="font-size:16px;font-weight:800;font-family:var(--mono);color:var(--neg);" id="gc-stops">0</div>
+          <div style="font-size:9px;color:var(--text-3);text-transform:uppercase;">Stop Hit</div>
+        </div>
+        <div>
+          <div style="font-size:16px;font-weight:800;font-family:var(--mono);color:var(--accent);" id="gc-open">0</div>
+          <div style="font-size:9px;color:var(--text-3);text-transform:uppercase;">Open</div>
+        </div>
+      </div>
+
+      <!-- Graded Calls Stream -->
+      <div id="graded-calls-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
   </aside>
 
-  <!-- ─── STATUS BAR ──────────────────────────────────────────── -->
-  <div id="status-bar-area">
-    <div id="status-bar">
-      <span class="status-dot info"></span>
-      Initializing…
+  <!-- ─── STATUS FOOTER ─────────────────────────────────────────── -->
+  <footer id="status-bar-area">
+    <div class="status-left">
+      <span class="status-dot" id="status-dot"></span>
+      <span id="status-text">Connected to Binance WSS live feed</span>
+      <span style="padding:1px 6px;border-radius:3px;background:var(--panel);border:1px solid var(--border);font-size:10px;color:var(--text-3);" id="feed-src-tag">Binance WS</span>
     </div>
-    <span style="color:var(--text-faint);font-size:10px;">
-      SMC Engine v1.0 &nbsp;|&nbsp;
-      <a href="https://github.com/yashwanth637/trading-signal-ai" target="_blank"
-         style="color:var(--text-faint);text-decoration:none;">GitHub</a>
-    </span>
-  </div>
+    <div style="font-size:10px;color:var(--text-3);">
+      Deeepr.ai Intelligence Engine · <a href="https://github.com/yashwanth637/trading-signal-ai" target="_blank" style="color:var(--text-2);text-decoration:none;">GitHub</a>
+    </div>
+  </footer>
 
 </div><!-- /#app -->
 
 <!-- ─── SETTINGS MODAL ────────────────────────────────────────── -->
-<div id="settings-modal" role="dialog" aria-modal="true" aria-label="Settings">
+<div id="settings-modal" role="dialog" aria-modal="true">
   <div class="modal-box">
-    <div class="modal-header">
-      <span class="modal-title">⚙ Settings</span>
-      <button class="modal-close" id="settings-close" title="Close">✕</button>
+    <div class="modal-head">
+      <div class="modal-title">⚙ Engine Settings</div>
+      <button class="icon-btn" id="modal-close-btn">✕</button>
     </div>
 
-    <!-- AI Settings -->
-    <div class="settings-section">
-      <div class="settings-section-title">🤖 AI Engine (Gemini)</div>
-
-      <div class="form-row">
+    <!-- Gemini AI Engine -->
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;margin-bottom:8px;">🤖 Lane 3: News & Catalyst AI</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
         <div>
-          <div class="form-label">Gemini API Key</div>
-          <div class="form-hint">Get free key at <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com</a></div>
+          <div style="font-size:12px;color:var(--text-1);">Gemini API Key</div>
+          <div style="font-size:10px;color:var(--text-3);">Free at <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent);">aistudio.google.com</a></div>
         </div>
-        <input type="password" id="input-gemini-key" class="form-input" placeholder="AIza…" autocomplete="off" />
+        <input type="password" id="cfg-gemini-key" class="form-input" placeholder="AIza…" />
       </div>
-
-      <div class="form-row">
-        <div>
-          <div class="form-label">Enable AI Confirmation</div>
-          <div class="form-hint">Gemini confirms logic engine signals</div>
-        </div>
-        <label class="toggle">
-          <input type="checkbox" id="toggle-ai" checked />
-          <span class="toggle-slider"></span>
-        </label>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:12px;color:var(--text-2);">Enable Gemini Live Catalyst Synthesis</span>
+        <input type="checkbox" id="cfg-gemini-enabled" checked />
       </div>
     </div>
 
-    <!-- Data Feed -->
-    <div class="settings-section">
-      <div class="settings-section-title">📡 Data Feed (Forex)</div>
-
-      <div class="form-row">
-        <div>
-          <div class="form-label">Alpha Vantage API Key</div>
-          <div class="form-hint">Free at <a href="https://www.alphavantage.co/support/#api-key" target="_blank" style="color:var(--accent)">alphavantage.co</a> — 25 req/day</div>
-        </div>
-        <input type="password" id="input-av-key" class="form-input" placeholder="XXXXXX…" autocomplete="off" />
+    <!-- Forex Data Feeds -->
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--purple);text-transform:uppercase;margin-bottom:8px;">📡 Forex Feeds</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <span style="font-size:12px;color:var(--text-1);">Alpha Vantage Key</span>
+        <input type="password" id="cfg-av-key" class="form-input" placeholder="Alpha Vantage Key" />
       </div>
-
-      <div class="form-row">
-        <div>
-          <div class="form-label">Twelve Data API Key <span style="font-size:10px;color:var(--text-faint)">(optional)</span></div>
-          <div class="form-hint">Free at <a href="https://twelvedata.com" target="_blank" style="color:var(--accent)">twelvedata.com</a> — 800 req/day</div>
-        </div>
-        <input type="password" id="input-td-key" class="form-input" placeholder="td_…" autocomplete="off" />
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:12px;color:var(--text-1);">Twelve Data Key</span>
+        <input type="password" id="cfg-td-key" class="form-input" placeholder="Twelve Data Key" />
       </div>
     </div>
 
-    <!-- Alerts -->
-    <div class="settings-section">
-      <div class="settings-section-title">🔔 Alerts</div>
-
-      <div class="form-row">
-        <div class="form-label">Browser Notifications</div>
-        <label class="toggle">
-          <input type="checkbox" id="toggle-notif" checked />
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-
-      <div class="form-row">
-        <div class="form-label">Audio Chime</div>
-        <label class="toggle">
-          <input type="checkbox" id="toggle-audio" checked />
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-    </div>
-
-    <!-- SMC Engine Tuning -->
-    <div class="settings-section">
-      <div class="settings-section-title">⚙ SMC Engine Tuning</div>
-
-      <div class="form-row">
-        <div>
-          <div class="form-label">Signal Threshold</div>
-          <div class="form-hint">Min confluence score to fire a signal (default: 5)</div>
-        </div>
-        <input type="number" id="input-threshold" class="form-input-sm" min="3" max="10" value="5" />
-      </div>
-
-      <div class="form-row">
-        <div>
-          <div class="form-label">Swing Lookback</div>
-          <div class="form-hint">Bars left+right to confirm swing H/L (default: 5)</div>
-        </div>
-        <input type="number" id="input-lookback" class="form-input-sm" min="2" max="20" value="5" />
-      </div>
-    </div>
-
-    <div class="modal-footer">
-      <button class="btn btn-ghost" id="settings-close-2">Cancel</button>
-      <button class="btn btn-primary" id="settings-save">Save Settings</button>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;">
+      <button class="action-btn" style="background:var(--panel);color:var(--text-1);" id="modal-cancel-btn">Cancel</button>
+      <button class="action-btn" id="modal-save-btn">Save Settings</button>
     </div>
   </div>
 </div>
 
-<!-- ─── TOAST ─────────────────────────────────────────────────── -->
-<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<!-- Toast Popup -->
+<div class="toast" id="toast"></div>
 
-<!-- ─── App Bootstrap ─────────────────────────────────────────── -->
+<!-- Application Entry -->
 <script type="module" src="assets/js/app.js"></script>
-
-<!-- Additional settings modal close button wiring (before module load) -->
-<script>
-  document.getElementById('settings-close-2')?.addEventListener('click', () => {
-    document.getElementById('settings-modal')?.classList.remove('open');
-  });
-</script>
 
 </body>
 </html>
