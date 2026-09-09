@@ -2,7 +2,10 @@
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#03060f" />
   <title>TradersZone.ai — AI Trading Signals & Market Intelligence</title>
   <meta name="description" content="Autonomous trading signals using price action, liquidity sweeps, support and resistance, and background AI market intelligence." />
 
@@ -36,48 +39,54 @@
 
   <!-- ─── TOP NAVBAR ─────────────────────────────────────────────── -->
   <header id="navbar">
-    <!-- Brand Logo -->
-    <a href="#" class="brand" aria-label="TradersZone.ai">
-      <div class="brand-bars">
-        <div class="brand-bar"></div>
-        <div class="brand-bar"></div>
-        <div class="brand-bar"></div>
-        <div class="brand-dot"></div>
+    <div class="nav-top-row">
+      <div class="nav-left">
+        <!-- Brand Logo -->
+        <a href="#" class="brand" aria-label="TradersZone.ai">
+          <div class="brand-bars">
+            <div class="brand-bar"></div>
+            <div class="brand-bar"></div>
+            <div class="brand-bar"></div>
+            <div class="brand-dot"></div>
+          </div>
+          <span>Traders<span class="brand-accent">Zone</span>.ai</span>
+        </a>
       </div>
-      <span>Traders<span class="brand-accent">Zone</span>.ai</span>
-    </a>
 
-    <!-- Market Selector (Crypto vs Forex/Gold) -->
-    <div class="mkt-toggle">
-      <button class="mkt-btn active" data-market="CRYPTO" id="mkt-crypto">Crypto</button>
-      <button class="mkt-btn" data-market="FOREX" id="mkt-forex">Forex & Gold</button>
+      <div class="nav-right">
+        <!-- Theme Toggle (Light / Dark) with Direct Inline Handler -->
+        <button class="icon-btn" id="theme-btn" onclick="window.toggleTheme && window.toggleTheme()" title="Toggle Light / Dark Mode">☀</button>
+
+        <!-- Push Notification Button -->
+        <button class="icon-btn" id="notif-btn" title="Enable Live Browser Push Alerts">🔔</button>
+
+        <!-- Analyze Button -->
+        <button class="action-btn" id="analyze-btn" title="Run AI Signal Analysis">
+          <span>⚡</span>
+          <span class="btn-lbl">Analyze</span>
+        </button>
+
+        <!-- Settings Gear -->
+        <button class="icon-btn" id="settings-btn" title="Settings & Keys">⚙</button>
+      </div>
     </div>
 
-    <!-- Currency Pair Dropdown with Direct Event Handler -->
-    <select id="sym-select" onchange="window.onSymbolSelect && window.onSymbolSelect(this.value)" title="Select Asset Pair"></select>
+    <div class="nav-center">
+      <!-- Market Selector (Crypto vs Forex/Gold) -->
+      <div class="mkt-toggle">
+        <button class="mkt-btn active" data-market="CRYPTO" id="mkt-crypto">Crypto</button>
+        <button class="mkt-btn" data-market="FOREX" id="mkt-forex">Forex & Gold</button>
+      </div>
 
-    <!-- Real-time Live Price Ticker -->
-    <div class="ticker-display">
-      <span class="ticker-price" id="ticker-price">—</span>
-      <span class="ticker-chg" id="ticker-chg">—</span>
+      <!-- Currency Pair Dropdown with Direct Event Handler -->
+      <select id="sym-select" onchange="window.onSymbolSelect && window.onSymbolSelect(this.value)" title="Select Asset Pair"></select>
+
+      <!-- Real-time Live Price Ticker -->
+      <div class="ticker-display">
+        <span class="ticker-price" id="ticker-price">—</span>
+        <span class="ticker-chg" id="ticker-chg">—</span>
+      </div>
     </div>
-
-    <div class="spacer"></div>
-
-    <!-- Theme Toggle (Light / Dark) with Direct Inline Handler -->
-    <button class="icon-btn" id="theme-btn" onclick="window.toggleTheme && window.toggleTheme()" title="Toggle Light / Dark Mode">☀</button>
-
-    <!-- Push Notification Button -->
-    <button class="icon-btn" id="notif-btn" title="Enable Live Browser Push Alerts">🔔</button>
-
-    <!-- Analyze Button -->
-    <button class="action-btn" id="analyze-btn" title="Run AI Signal Analysis">
-      <span>⚡</span>
-      <span>Analyze</span>
-    </button>
-
-    <!-- Settings Gear -->
-    <button class="icon-btn" id="settings-btn" title="Settings & Keys">⚙</button>
   </header>
 
   <!-- ─── HERO VERDICT BAR ───────────────────────────────────────── -->
@@ -171,7 +180,7 @@
     </div>
 
     <!-- Live Performance Scorecard (The Market Grades Every Call) -->
-    <div>
+    <div id="scorecard-section">
       <div style="font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">
         Signal Accuracy Tracker
       </div>
@@ -196,7 +205,7 @@
     </div>
 
     <!-- Recent Signals Stream -->
-    <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+    <div id="recent-calls-section" style="flex:1;display:flex;flex-direction:column;gap:6px;">
       <div style="font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.5px;">
         Recent Calls
       </div>
@@ -215,6 +224,22 @@
       TradersZone.ai · <a href="https://github.com/yashwanth637/trading-signal-ai" target="_blank" style="color:var(--text-2);text-decoration:none;">GitHub</a>
     </div>
   </footer>
+
+  <!-- ─── MOBILE BOTTOM NAVIGATION (Phones Only) ─────────────────── -->
+  <nav id="mobile-bottom-nav">
+    <button class="mob-tab-btn active" data-target="chart-area">
+      <span class="mob-icon">📈</span>
+      <span class="mob-label">Chart</span>
+    </button>
+    <button class="mob-tab-btn" data-target="main-signal-card">
+      <span class="mob-icon">🤖</span>
+      <span class="mob-label">AI Signal</span>
+    </button>
+    <button class="mob-tab-btn" data-target="scorecard-section">
+      <span class="mob-icon">📊</span>
+      <span class="mob-label">Accuracy</span>
+    </button>
+  </nav>
 
 </div><!-- /#app -->
 

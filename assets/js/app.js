@@ -219,6 +219,48 @@ function wireEventListeners() {
   document.getElementById('modal-close-btn')?.addEventListener('click', () => ui.closeSettings());
   document.getElementById('modal-cancel-btn')?.addEventListener('click', () => ui.closeSettings());
   document.getElementById('modal-save-btn')?.addEventListener('click', () => ui.saveSettings());
+
+  // Mobile Bottom Navigation Tabs (Phones)
+  document.querySelectorAll('#mobile-bottom-nav .mob-tab-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.dataset.target;
+      const targetEl = document.getElementById(targetId);
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      document.querySelectorAll('#mobile-bottom-nav .mob-tab-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  // Mobile Scroll Spy for Bottom Navigation
+  if ('IntersectionObserver' in window) {
+    const sectionObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const id = entry.target.id;
+          document.querySelectorAll('#mobile-bottom-nav .mob-tab-btn').forEach((btn) => {
+            btn.classList.toggle('active', btn.dataset.target === id);
+          });
+        }
+      });
+    }, { threshold: 0.3 });
+
+    ['chart-area', 'main-signal-card', 'scorecard-section'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) sectionObserver.observe(el);
+    });
+  }
+
+  // Handle window resize and mobile orientation changes
+  window.addEventListener('resize', () => {
+    if (chartManager) chartManager.resize();
+  });
+  window.addEventListener('orientationchange', () => {
+    setTimeout(() => {
+      if (chartManager) chartManager.resize();
+    }, 200);
+  });
 }
 
 function switchMarket(market) {

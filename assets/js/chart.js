@@ -334,6 +334,100 @@ export class ChartManager {
       this._zoneLayer.attachPrimitive(slPrim);
       this._projectionPrimitives.push(tpPrim, slPrim);
     }
+
+    this._renderBuoyancyLevelCards({ entry, target, stop, verdict });
+  }
+
+  _renderBuoyancyLevelCards({ entry, target, stop, verdict }) {
+    if (!this._buoyancyOverlay || !this._candles) return;
+    this._buoyancyOverlay.innerHTML = '';
+
+    const yTP = this._candles.priceToCoordinate(target) || 70;
+    const ySL = this._candles.priceToCoordinate(stop) || 240;
+    const yEntry = this._candles.priceToCoordinate(entry) || 150;
+    const targetPct = entry ? +(((Math.abs(target - entry)) / entry) * 100).toFixed(2) : 0;
+
+    this._buoyancyOverlay.innerHTML = `
+      <div class="chip-pct" style="top: ${Math.max(10, yTP - 26)}px; right: clamp(15px, 12vw, 90px);">+${targetPct}% Target</div>
+      <div class="lvlcard tp-lvlcard" id="card-tp" style="top: ${Math.max(15, yTP - 14)}px; right: clamp(15px, 12vw, 90px);" title="Drag to adjust Take Profit">
+        <span class="bdg tp">TP</span>
+        <span class="val tp">${target}</span>
+        <span class="grip">⋮ ⋮</span>
+      </div>
+      <div class="entry-tag" style="top: ${Math.max(20, yEntry - 10)}px; right: clamp(15px, 12vw, 90px);">Entry: ${entry}</div>
+      <div class="lvlcard sl-lvlcard" id="card-sl" style="top: ${Math.max(25, ySL - 14)}px; right: clamp(15px, 12vw, 90px);" title="Drag to adjust Stop Loss">
+        <span class="bdg sl">SL</span>
+        <span class="val sl">${stop}</span>
+        <span class="grip">⋮ ⋮</span>
+      </div>
+    `;
+
+    this._makeDraggable('card-tp', (newY) => {
+      const newPrice = this._candles.coordinateToPrice(newY);
+      if (newPrice) {
+        const valEl = document.querySelector('#card-tp .val.tp');
+        if (valEl) valEl.textContent = newPrice.toFixed(2);
+        this.showSLTPLines({ entryPrice: entry, stopLoss: stop, takeProfit: newPrice });
+      }
+    });
+
+    this._makeDraggable('card-sl', (newY) => {
+      const newPrice = this._candles.coordinateToPrice(newY);
+      if (newPrice) {
+        const valEl = document.querySelector('#card-sl .val.sl');
+        if (valEl) valEl.textContent = newPrice.toFixed(2);
+        this.showSLTPLines({ entryPrice: entry, stopLoss: newPrice, takeProfit: target });
+      }
+    });
+  }
+
+  _makeDraggable(id, onDrag) {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    const startDrag = (startY) => {
+      const origTop = el.offsetTop;
+
+      const onMove = (clientY) => {
+        const deltaY = clientY - startY;
+        const overlayH = this._buoyancyOverlay?.clientHeight || 300;
+        const newTop = Math.max(10, Math.min(overlayH - 30, origTop + deltaY));
+        el.style.top = `${newTop}px`;
+        if (onDrag) onDrag(newTop);
+      };
+
+      const onMouseMove = (e) => onMove(e.clientY);
+      const onMouseUp = () => {
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+      };
+
+      const onTouchMove = (e) => {
+        if (e.touches && e.touches[0]) {
+          onMove(e.touches[0].clientY);
+        }
+      };
+      const onTouchEnd = () => {
+        window.removeEventListener('touchmove', onTouchMove);
+        window.removeEventListener('touchend', onTouchEnd);
+      };
+
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+      window.addEventListener('touchmove', onTouchMove, { passive: true });
+      window.addEventListener('touchend', onTouchEnd);
+    };
+
+    el.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      startDrag(e.clientY);
+    });
+
+    el.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches[0]) {
+        startDrag(e.touches[0].clientY);
+      }
+    }, { passive: true });
   }
 
   clearProjectionZones() {
@@ -341,6 +435,26 @@ export class ChartManager {
       try { this._zoneLayer.detachPrimitive(p); } catch {}
     }
     this._projectionPrimitives = [];
+    if (this._buoyancyOverlay) {
+      this._buoyancyOverlay.innerHTML = '';
+    }
+  }
+
+  resize() {
+    if (this._chart && this._mainEl) {
+      const w = this._mainEl.clientWidth;
+      const h = this._mainEl.clientHeight;
+      if (w > 0 && h > 0) {
+        this._chart.resize(w, h);
+      }
+    }
+    if (this._volChart && this._volEl) {
+      const vw = this._volEl.clientWidth;
+      const vh = this._volEl.clientHeight;
+      if (vw > 0 && vh > 0) {
+        this._volChart.resize(vw, vh);
+      }
+    }
   }
 
   showSLTPLines({ entryPrice, stopLoss, takeProfit }) {

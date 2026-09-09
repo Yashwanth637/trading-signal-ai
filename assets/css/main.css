@@ -107,6 +107,26 @@ html, body {
   transition: background 0.18s ease, border-color 0.18s ease;
 }
 
+.nav-top-row {
+  display: contents;
+}
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nav-center {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -623,15 +643,370 @@ html, body {
 .toast.danger  { border-color: var(--neg); color: var(--neg); }
 .toast.warning { border-color: var(--warn); color: var(--warn); }
 
-@media (max-width: 900px) {
-  #app {
-    grid-template-columns: 1fr;
-    grid-template-rows: 50px 42px 1fr 280px 28px;
-    grid-template-areas:
-      "nav"
-      "hero"
-      "chart"
-      "sidebar"
-      "status";
+/* ── Mobile Bottom Navigation (Hidden on Desktop) ─────────────── */
+#mobile-bottom-nav {
+  display: none;
+}
+
+/* ── Mobile Phone Optimization (<= 768px) ────────────────────────── */
+@media (max-width: 768px) {
+  html, body {
+    height: auto;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+    overflow-x: hidden;
+  }
+
+  /* Two-tier Mobile Navbar */
+  #navbar {
+    height: auto;
+    min-height: 84px;
+    padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .nav-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .nav-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .brand {
+    font-size: 15px;
+    gap: 6px;
+  }
+  .brand-bar:nth-child(1) { width: 14px; }
+  .brand-bar:nth-child(2) { width: 9px; }
+  .brand-bar:nth-child(3) { width: 5px; }
+
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 0;
+  }
+
+  .nav-center {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .nav-center::-webkit-scrollbar { display: none; }
+
+  .mkt-toggle {
+    margin-left: 0;
+    flex-shrink: 0;
+    padding: 2px;
+  }
+  .mkt-btn {
+    padding: 4px 8px;
+    font-size: 11px;
+    min-height: 30px;
+  }
+
+  #sym-select {
+    flex: 1;
+    min-width: 95px;
+    max-width: 130px;
+    padding: 5px 8px;
+    font-size: 14px;
+    min-height: 32px;
+  }
+
+  .ticker-display {
+    flex-shrink: 0;
+    gap: 4px;
+  }
+  .ticker-price { font-size: 12px; }
+  .ticker-chg { font-size: 10px; }
+
+  .action-btn {
+    padding: 5px 10px;
+    font-size: 11px;
+    min-height: 32px;
+  }
+  .icon-btn {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+  }
+
+  /* Responsive Hero Verdict Bar */
+  #hero-verdict-bar {
+    height: auto;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .verdict-badge {
+    align-self: flex-start;
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+
+  .hero-sentence {
+    max-width: 100%;
+    white-space: normal;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .hero-levels {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    margin-left: 0;
+  }
+
+  .hero-lvl {
+    flex-direction: column;
+    align-items: center;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 5px 2px;
+    text-align: center;
+  }
+  .hero-lvl .k { font-size: 8px; margin-bottom: 2px; }
+  .hero-lvl .v { font-size: 11px; font-weight: 700; }
+
+  /* Responsive Chart Stage */
+  #chart-area {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    overflow: visible;
+  }
+
+  .chart-header-tabs {
+    padding: 6px 10px;
+    gap: 3px;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .chart-header-tabs::-webkit-scrollbar { display: none; }
+
+  .tf-chip {
+    padding: 5px 11px;
+    font-size: 12px;
+    min-height: 34px;
+    border-radius: 4px;
+  }
+
+  .buoyancy-hud-tag {
+    font-size: 9px;
+    padding: 3px 6px;
+    white-space: nowrap;
+    margin-left: auto;
+  }
+
+  #main-chart {
+    height: 52vh;
+    min-height: 380px;
+    max-height: 500px;
+    width: 100%;
+    position: relative;
+  }
+
+  #vol-chart {
+    height: 48px;
+    width: 100%;
+  }
+
+  #chart-buoyancy-overlay {
+    inset: 32px 0 48px 0;
+  }
+  .lvlcard {
+    padding: 3px 7px;
+    font-size: 10px;
+    right: clamp(10px, 8vw, 60px) !important;
+    touch-action: none;
+  }
+  .chip-pct {
+    font-size: 9px;
+    padding: 2px 5px;
+    right: clamp(10px, 8vw, 60px) !important;
+  }
+  .entry-tag {
+    font-size: 9px;
+    padding: 2px 5px;
+    right: clamp(10px, 8vw, 60px) !important;
+  }
+
+  /* Responsive Sidebar */
+  #sidebar {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    padding: 14px 12px;
+    gap: 12px;
+    height: auto;
+    overflow: visible;
+  }
+
+  .main-signal-card {
+    padding: 14px;
+    border-radius: 8px;
+  }
+
+  .levels-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .lvl-card {
+    padding: 7px 8px;
+  }
+  .lvl-card .k { font-size: 8px; }
+  .lvl-card .v { font-size: 12px; }
+
+  .scorecard-box {
+    padding: 10px 6px;
+  }
+  .sc-item-num { font-size: 15px; }
+  .sc-item-lbl { font-size: 8px; }
+
+  #recent-calls-section {
+    max-height: 320px;
+  }
+
+  /* Status Bar on Mobile */
+  #status-bar-area {
+    padding: 8px 12px;
+    font-size: 10px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* Settings Modal on Mobile */
+  .modal-box {
+    width: 94vw;
+    max-width: 420px;
+    padding: 16px;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .form-input {
+    width: 100%;
+    font-size: 16px; /* Prevents auto-zoom on iOS */
+  }
+
+  /* Toast on Mobile */
+  .toast {
+    bottom: calc(66px + env(safe-area-inset-bottom, 0px));
+    width: max-content;
+    max-width: 90vw;
+    text-align: center;
+  }
+
+  /* Mobile Bottom Navigation Bar */
+  #mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(54px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    align-items: center;
+    justify-content: space-around;
+    z-index: 100;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.2);
+  }
+
+  .mob-tab-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    height: 50px;
+    background: transparent;
+    border: none;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mob-tab-btn:active {
+    transform: scale(0.95);
+  }
+
+  .mob-tab-btn.active {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .mob-icon {
+    font-size: 17px;
+    line-height: 1;
+  }
+
+  .mob-label {
+    font-size: 10px;
+    font-weight: 600;
+  }
+}
+
+/* Landscape Phone Mode (maximize chart real estate) */
+@media (max-width: 900px) and (orientation: landscape) {
+  #navbar {
+    padding: 4px 10px;
+    gap: 4px;
+    min-height: 44px;
+  }
+  .nav-center {
+    display: none; /* Hide second row in landscape to maximize chart */
+  }
+  #main-chart {
+    height: 72vh;
+    min-height: 240px;
+  }
+  #mobile-bottom-nav {
+    height: calc(42px + env(safe-area-inset-bottom, 0px));
+  }
+  .mob-tab-btn {
+    height: 40px;
+    flex-direction: row;
+    gap: 5px;
+  }
+  .mob-icon { font-size: 13px; }
+  .mob-label { font-size: 10px; }
 }
