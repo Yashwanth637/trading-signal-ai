@@ -1,0 +1,277 @@
+<!-- Trading Signal AI — Main Dashboard
+     GitHub: https://github.com/yashwanth673/trading-signal-ai
+     Live:   https://yashwanth673.github.io/trading-signal-ai/
+-->
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trading Signal AI — SMC Analysis</title>
+  <meta name="description" content="AI-powered trading signal generator using Smart Money Concepts — Order Blocks, FVG, BOS, Liquidity Sweeps" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="assets/css/main.css" />
+
+  <!-- TradingView Lightweight Charts v4 (CDN) -->
+  <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+
+  <!-- Favicon inline SVG -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%234f7fff'/><polyline points='4,22 10,14 16,18 22,8 28,12' stroke='white' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/><circle cx='22' cy='8' r='2.5' fill='%2326a69a'/></svg>" />
+</head>
+
+<body>
+<div id="app">
+
+  <!-- ─── TOP BAR ──────────────────────────────────────────────── -->
+  <header id="topbar">
+    <!-- Logo -->
+    <div class="logo">
+      <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect width="32" height="32" rx="6" fill="#4f7fff"/>
+        <polyline points="4,22 10,14 16,18 22,8 28,12" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="22" cy="8" r="2.5" fill="#26a69a"/>
+      </svg>
+      <div>
+        <div>Signal AI</div>
+        <div class="logo-sub">SMC Engine</div>
+      </div>
+    </div>
+
+    <!-- Market toggle -->
+    <div class="market-btns">
+      <button class="market-btn active" data-market="CRYPTO" title="Cryptocurrency pairs">Crypto</button>
+      <button class="market-btn"        data-market="FOREX"  title="Forex pairs">Forex</button>
+    </div>
+
+    <!-- Symbol select -->
+    <select id="symbol-select" title="Select trading pair"></select>
+
+    <!-- Custom symbol input -->
+    <input id="symbol-input" type="text" placeholder="Custom…" maxlength="12" title="Type any symbol and press Enter" />
+
+    <!-- Price ticker -->
+    <div id="price-ticker">
+      <span class="tick-symbol">—</span>
+      <span class="tick-price">—</span>
+    </div>
+
+    <div class="spacer"></div>
+
+    <!-- Notification permission -->
+    <button class="icon-btn" id="notif-btn" title="Enable browser notifications">🔔</button>
+
+    <!-- Analyze Now -->
+    <button id="analyze-btn" title="Run SMC analysis on current data">⚡ Analyze</button>
+
+    <!-- Theme toggle -->
+    <button class="icon-btn" id="theme-toggle" title="Toggle dark/light theme">☀</button>
+
+    <!-- Settings -->
+    <button class="icon-btn" id="settings-btn" title="Settings — API keys, thresholds">⚙</button>
+  </header>
+
+  <!-- ─── TF + CHART TAB BAR ───────────────────────────────────── -->
+  <div id="tf-tabbar">
+    <!-- Timeframe buttons -->
+    <button class="tf-btn" data-tf="1">1m</button>
+    <button class="tf-btn" data-tf="3">3m</button>
+    <button class="tf-btn" data-tf="5">5m</button>
+    <button class="tf-btn" data-tf="15">15m</button>
+    <button class="tf-btn" data-tf="30">30m</button>
+    <button class="tf-btn active" data-tf="60">1H</button>
+    <button class="tf-btn" data-tf="120">2H</button>
+    <button class="tf-btn" data-tf="240">4H</button>
+    <button class="tf-btn" data-tf="720">12H</button>
+    <button class="tf-btn" data-tf="1D">1D</button>
+    <button class="tf-btn" data-tf="1W">1W</button>
+
+    <div class="tab-divider"></div>
+
+    <!-- Chart tab toggle -->
+    <button class="chart-tab-btn active" id="tab-main" title="Lightweight Charts (SMC overlays)">📊 SMC Chart</button>
+    <button class="chart-tab-btn"        id="tab-tv"   title="Full TradingView chart">📈 TV Chart</button>
+
+    <div class="tab-divider"></div>
+
+    <!-- HTF Bias -->
+    <span class="htf-label">HTF Bias:</span>
+    <select id="htf-bias" title="Set higher-timeframe trend bias for signal filtering">
+      <option value="NEUTRAL">Neutral</option>
+      <option value="BULLISH">Bullish</option>
+      <option value="BEARISH">Bearish</option>
+    </select>
+  </div>
+
+  <!-- ─── MAIN CHART AREA ──────────────────────────────────────── -->
+  <main id="chart-area">
+    <!-- LW Charts tab -->
+    <div id="chart-area-main" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+      <div id="main-chart"></div>
+      <div id="vol-chart"></div>
+    </div>
+
+    <!-- TradingView Widget tab -->
+    <div id="chart-area-tv" style="display:none;flex:1;overflow:hidden;">
+      <div id="tv-widget" style="width:100%;height:100%;"></div>
+    </div>
+  </main>
+
+  <!-- ─── SIDEBAR ──────────────────────────────────────────────── -->
+  <aside id="sidebar">
+    <!-- Header -->
+    <div class="sidebar-header">
+      <span class="sidebar-title">Signals</span>
+      <span id="signal-count">0</span>
+    </div>
+
+    <!-- Signal feed -->
+    <div id="signal-list">
+      <!-- Signal cards injected here by ui.js -->
+      <div style="padding:20px;text-align:center;color:var(--text-faint);font-size:12px;">
+        Waiting for signals…<br>
+        <span style="font-size:10px;">Select a symbol and timeframe to begin.</span>
+      </div>
+    </div>
+
+    <!-- Analysis panel -->
+    <div id="analysis-panel"></div>
+  </aside>
+
+  <!-- ─── STATUS BAR ──────────────────────────────────────────── -->
+  <div id="status-bar-area">
+    <div id="status-bar">
+      <span class="status-dot info"></span>
+      Initializing…
+    </div>
+    <span style="color:var(--text-faint);font-size:10px;">
+      SMC Engine v1.0 &nbsp;|&nbsp;
+      <a href="https://github.com/yashwanth673/trading-signal-ai" target="_blank"
+         style="color:var(--text-faint);text-decoration:none;">GitHub</a>
+    </span>
+  </div>
+
+</div><!-- /#app -->
+
+<!-- ─── SETTINGS MODAL ────────────────────────────────────────── -->
+<div id="settings-modal" role="dialog" aria-modal="true" aria-label="Settings">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">⚙ Settings</span>
+      <button class="modal-close" id="settings-close" title="Close">✕</button>
+    </div>
+
+    <!-- AI Settings -->
+    <div class="settings-section">
+      <div class="settings-section-title">🤖 AI Engine (Gemini)</div>
+
+      <div class="form-row">
+        <div>
+          <div class="form-label">Gemini API Key</div>
+          <div class="form-hint">Get free key at <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com</a></div>
+        </div>
+        <input type="password" id="input-gemini-key" class="form-input" placeholder="AIza…" autocomplete="off" />
+      </div>
+
+      <div class="form-row">
+        <div>
+          <div class="form-label">Enable AI Confirmation</div>
+          <div class="form-hint">Gemini confirms logic engine signals</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-ai" checked />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Data Feed -->
+    <div class="settings-section">
+      <div class="settings-section-title">📡 Data Feed (Forex)</div>
+
+      <div class="form-row">
+        <div>
+          <div class="form-label">Alpha Vantage API Key</div>
+          <div class="form-hint">Free at <a href="https://www.alphavantage.co/support/#api-key" target="_blank" style="color:var(--accent)">alphavantage.co</a> — 25 req/day</div>
+        </div>
+        <input type="password" id="input-av-key" class="form-input" placeholder="XXXXXX…" autocomplete="off" />
+      </div>
+
+      <div class="form-row">
+        <div>
+          <div class="form-label">Twelve Data API Key <span style="font-size:10px;color:var(--text-faint)">(optional)</span></div>
+          <div class="form-hint">Free at <a href="https://twelvedata.com" target="_blank" style="color:var(--accent)">twelvedata.com</a> — 800 req/day</div>
+        </div>
+        <input type="password" id="input-td-key" class="form-input" placeholder="td_…" autocomplete="off" />
+      </div>
+    </div>
+
+    <!-- Alerts -->
+    <div class="settings-section">
+      <div class="settings-section-title">🔔 Alerts</div>
+
+      <div class="form-row">
+        <div class="form-label">Browser Notifications</div>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-notif" checked />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="form-row">
+        <div class="form-label">Audio Chime</div>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-audio" checked />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- SMC Engine Tuning -->
+    <div class="settings-section">
+      <div class="settings-section-title">⚙ SMC Engine Tuning</div>
+
+      <div class="form-row">
+        <div>
+          <div class="form-label">Signal Threshold</div>
+          <div class="form-hint">Min confluence score to fire a signal (default: 5)</div>
+        </div>
+        <input type="number" id="input-threshold" class="form-input-sm" min="3" max="10" value="5" />
+      </div>
+
+      <div class="form-row">
+        <div>
+          <div class="form-label">Swing Lookback</div>
+          <div class="form-hint">Bars left+right to confirm swing H/L (default: 5)</div>
+        </div>
+        <input type="number" id="input-lookback" class="form-input-sm" min="2" max="20" value="5" />
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="settings-close-2">Cancel</button>
+      <button class="btn btn-primary" id="settings-save">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── TOAST ─────────────────────────────────────────────────── -->
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<!-- ─── App Bootstrap ─────────────────────────────────────────── -->
+<script type="module" src="assets/js/app.js"></script>
+
+<!-- Additional settings modal close button wiring (before module load) -->
+<script>
+  document.getElementById('settings-close-2')?.addEventListener('click', () => {
+    document.getElementById('settings-modal')?.classList.remove('open');
+  });
+</script>
+
+</body>
+</html>
