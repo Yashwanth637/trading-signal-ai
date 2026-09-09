@@ -1,11 +1,11 @@
 /**
- * signalEngine.js — Signal & 4-Lane Orchestrator
+ * signalEngine.js — TradersZone.ai Orchestrator
  *
  * Coordinates:
- *   - FourLaneEngine ([T] Tech, [F] Flow, [N] News, [M] Macro)
- *   - PerformanceTracker (Graded Calls: Target Hit vs Stop Hit)
- *   - ChartManager (Projected Shaded Boxes, Markers, Lines)
- *   - Notifications & Audio Alerts
+ *   - Background 4-Lane Intelligence Engine
+ *   - PerformanceTracker (Grading calls real-time: Target Hit vs Stop Hit)
+ *   - ChartManager (Forecast Shaded Boxes, Markers, Levels)
+ *   - Clean UI Updates with Simple AI Sentences
  */
 
 import { FourLaneEngine } from './fourLaneEngine.js';
@@ -13,11 +13,6 @@ import { PerformanceTracker } from './performanceTracker.js';
 import { Notifications } from './notifications.js';
 
 export class SignalEngine {
-  /**
-   * @param {ChartManager} chartManager
-   * @param {Function} onVerdictUpdate  callback(verdictData)
-   * @param {Function} onCallResolved   callback(resolvedCall)
-   */
   constructor(chartManager, onVerdictUpdate, onCallResolved) {
     this._chart = chartManager;
     this._onVerdictUpdate = onVerdictUpdate;
@@ -48,27 +43,22 @@ export class SignalEngine {
     return this._tracker;
   }
 
-  /**
-   * Process an incoming closed candle or full history update
-   * @param {Candle[]} candles
-   */
   async onNewCandle(candles) {
     if (!this._running || !candles || candles.length < 20) return;
 
     const latest = candles[candles.length - 1];
 
-    // 1. Grade open calls against the incoming candle in real-time
+    // 1. Check open calls for Target Hit or Stop Hit against incoming candle
     const resolvedCalls = this._tracker.updateOnCandle(this._symbol, latest);
     for (const r of resolvedCalls) {
       this._onCallResolved?.(r);
-      const isWin = r.status === 'TARGET_HIT';
       Notifications.fireInfo(
-        `${isWin ? '🎯 Target Hit' : '🛑 Stop Hit'} — ${r.symbol}`,
-        `${r.verdict} completed at ${r.exitPrice} (${r.realizedPnlPct > 0 ? '+' : ''}${r.realizedPnlPct}%)`
+        `${r.status === 'TARGET_HIT' ? '🎯 Target Hit' : '🛑 Stop Hit'} — ${r.symbol}`,
+        `${r.verdict} reached ${r.exitPrice} (${r.realizedPnlPct > 0 ? '+' : ''}${r.realizedPnlPct}%)`
       );
     }
 
-    // 2. Run 4-Lane Real-Time Analysis
+    // 2. Execute 4-lane background analysis
     const verdictData = await this._engine.analyze({
       candles,
       symbol: this._symbol,
@@ -76,16 +66,15 @@ export class SignalEngine {
       htfTrend: this._htfTrend,
     });
 
-    // 3. Draw SMC structural zones
+    // 3. Draw SMC zones on chart
     if (verdictData.smcData) {
       this._chart.drawSMCZones(verdictData.smcData);
     }
 
-    // 4. Handle actionable trade calls (LONG or SHORT)
-    if (verdictData.verdict === 'LONG' || verdictData.verdict === 'SHORT') {
+    // 4. Handle Actionable Signal (BUY or SELL)
+    if (verdictData.verdict === 'BUY' || verdictData.verdict === 'SELL') {
       const levels = verdictData.levels;
 
-      // Draw Deeepr-style forward-projected shaded boxes on chart
       this._chart.drawProjectionZones({
         entry: levels.entry,
         target: levels.target,
@@ -100,11 +89,10 @@ export class SignalEngine {
         takeProfit: levels.target,
       });
 
-      // Avoid double-signaling on identical bar
       if (latest.time > this._lastSignalTime) {
         this._lastSignalTime = latest.time;
 
-        // Register to Graded Calls Performance Tracker
+        // Register with Performance Tracker
         this._tracker.registerCall({
           symbol: this._symbol,
           timeframe: this._timeframe,
@@ -115,19 +103,19 @@ export class SignalEngine {
           targetPct: levels.targetPct,
           stopPct: levels.stopPct,
           riskReward: levels.riskReward,
-          reasons: verdictData.reasons,
+          reasons: [verdictData.aiReason],
         });
 
-        // Add visual arrow marker to chart
+        // Add visual marker
         this._chart.addSignalMarker({
           time: latest.time,
           type: verdictData.verdict,
-          text: `${verdictData.verdict} · ${verdictData.agreementCount}/4`,
+          text: `${verdictData.verdict} · ${verdictData.confidence}%`,
         });
 
-        // Dispatch browser notification & audio alert
+        // Browser push notification
         Notifications.fireSignalAlert({
-          type: verdictData.verdict === 'LONG' ? 'BUY' : 'SELL',
+          type: verdictData.verdict,
           symbol: this._symbol,
           timeframe: this._timeframe,
           confidence: verdictData.confidence,
@@ -138,19 +126,15 @@ export class SignalEngine {
         });
       }
     } else {
-      // Verdict is WAIT
+      // WAIT verdict
       this._chart.clearProjectionZones();
       this._chart.clearSLTPLines();
     }
 
-    // 5. Notify UI to update Hero Card & Lane breakdown
+    // 5. Update UI
     this._onVerdictUpdate?.(verdictData);
   }
 
-  /**
-   * Manual instant analysis (e.g. from "⚡ Analyze" button)
-   * @param {Candle[]} candles
-   */
   async analyzeNow(candles) {
     if (!candles || candles.length < 20) return null;
     const verdictData = await this._engine.analyze({
@@ -164,7 +148,7 @@ export class SignalEngine {
       this._chart.drawSMCZones(verdictData.smcData);
     }
 
-    if (verdictData.verdict === 'LONG' || verdictData.verdict === 'SHORT') {
+    if (verdictData.verdict === 'BUY' || verdictData.verdict === 'SELL') {
       const levels = verdictData.levels;
       this._chart.drawProjectionZones({
         entry: levels.entry,

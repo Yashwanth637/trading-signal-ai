@@ -1,7 +1,6 @@
-# Deeepr Signal AI 🚀
+# TradersZone.ai 🚀
 
-**Precision-Engineered 4-Lane Real-Time Market Intelligence**
-*Inspired by Deeepr.ai (`deeepr.ai`) with institutional Smart Money Concepts (SMC)*
+**Autonomous Trading Signal AI & Institutional Market Intelligence**
 
 [![Live on GitHub Pages](https://img.shields.io/badge/Live-GitHub%20Pages-00d4ff?style=flat-square&logo=github)](https://yashwanth637.github.io/trading-signal-ai/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-00f090?style=flat-square)](LICENSE)
@@ -10,99 +9,47 @@
 
 ---
 
-## What makes this different?
+## What is TradersZone.ai?
 
-Most trading indicators bombard you with lagging signals or noisy raw chat. Deeepr Signal AI operates on **"One verdict per coin, with levels attached."**
+TradersZone.ai autonomous trading intelligence engine monitors markets across multiple dimensions: **Price Action & Smart Money Concepts (BOS, CHoCH, Order Blocks, Liquidity Sweeps)**, **Cumulative Volume Delta & Order Flow**, **Real-Time AI Catalyst Appraisal**, and **Macro Session Regimes**.
 
-Instead of guesswork, every setup passes through an institutional **4-Lane Reconciliation Engine**:
-
-```
-                       ┌─────────────────────────┐
-                       │      4-Lane Engine      │
-                       └────────────┬────────────┘
-         ┌──────────────┬───────────┴───────────┬──────────────┐
-         ▼              ▼                       ▼              ▼
-   [Technical]       [Flow]                  [News]         [Macro]
-  SMC / Structure  Spot/Order Flow      Gemini Catalyst    Session & Regimes
-  (Higher lows)   (Buyers absorbing)    (Neutral story)    (London Killzone)
-         │              │                       │              │
-         └──────────────┴───────────┬───────────┴──────────────┘
-                                    ▼
-                         ┌──────────────────────┐
-                         │ Reconciliation Rule  │
-                         │  (≥3 Lanes Agree?)   │
-                         └──────────┬───────────┘
-                       ┌────────────┴────────────┐
-                       ▼                         ▼
-             [LONG / SHORT Verdict]            [WAIT]
-          Entry, Target, Stop, R:R       "Lanes disagree"
-```
+Instead of noisy indicators or confusing multi-lane clutter, TradersZone.ai runs everything in the background and delivers:
+1. **One Clear Verdict**: `BUY`, `SELL`, or `WAIT`.
+2. **Simple 1–2 Sentence AI Explanation**: Explains exactly *why* you should buy or *why* you need to wait before entering.
+3. **Exact Mathematical Levels**: Entry, Target (TP), Stop Loss (SL), and Risk-to-Reward (R:R).
+4. **On-Chart Shaded Forecast Zones**: Visual projection boxes extending directly from the signal bar into future price action.
 
 ---
 
-## Key Features
+## Zero-Key Data Feeds (No API Keys Needed)
+
+* **Crypto (BTC, ETH, SOL, BNB, XRP, etc.)**: Direct Binance real-time WebSocket stream + resilient multi-proxy historical klines.
+* **Gold (XAU/USD)**: Direct institutional real-time stream via Binance's physically-backed Gold (`PAXGUSDT`). 100% free, tick-by-tick updates with zero API keys required.
+* **Forex (EUR/USD, GBP/USD, USD/JPY, AUD/USD, USD/CAD)**: Multi-source live tick engine with zero API keys needed.
+
+---
+
+## Features
 
 | Feature | Description |
 |---|---|
-| ⚡ **4-Lane Intelligence** | Analyzes **Technical (SMC)**, **Order Flow (Volume Delta)**, **News (Gemini AI)**, and **Macro (Sessions & ATR)** in parallel. |
-| ⏸ **The `WAIT` Verdict** | When lanes conflict (e.g., Technical is Bullish but Order Flow shows sell absorption), it explicitly outputs **`WAIT`** to protect capital. |
-| 🎯 **Exact Levels** | Every call comes with exact **Entry**, **Target (TP)** with projected `%` gain, **Stop Loss (SL)** with risk `%`, and **R:R Ratio**. |
-| 🟩 **Forward-Projected Shaded Zones** | Shaded forecast rectangles (green for Target, red for Stop) projected directly onto TradingView Lightweight Charts. |
-| 💬 **Plain-English Strategy Builder** | Describe rules in natural English (e.g., *"Buy BTC on 1h when RSI < 30 and price sweeps equal lows with 2R"*). Compiles and backtests instantly on real candles. |
-| 📊 **The Market Grades Every Call** | Live scorecard tracking: `Target Hit` vs `Stop Hit`. Zero cherry-picking, pure transparency. |
-| 🎨 **Obsidian Void UI** | Deep dark aesthetic (`#03060f`), neon cyan (`#00d4ff`) and purple (`#a855f7`) accents, glassmorphic cards, and monospaced financial tables. |
+| ⚡ **Main Signal & AI Reason** | Clean verdict (`BUY`, `SELL`, or `WAIT`) with a simple 1–2 sentence AI explanation answering *"Why should I buy?"* or *"Why should I wait?"*. |
+| 📊 **Background 4-Lane Engine** | Evaluates Market Structure (SMC), Volume Delta, News/Catalyst, and Macro Sessions simultaneously in the background. |
+| 🌓 **Dynamic Light & Dark Theme** | Instant toggle between TradersZone Obsidian Dark (`#03060f`) and crisp Light mode. |
+| 🎯 **Forward-Projected Forecasts** | Green (Target) and Red (Stop Loss) shaded boxes projected directly onto the candlestick chart. |
+| 📈 **Accurate Accuracy Scorecard** | Every call is monitored in real-time against live ticks to record `Target Hit` vs `Stop Hit`. |
 
 ---
 
-## How the 4 Lanes Work
+## Deploy Updates to GitHub Pages
 
-### 1. [T] Technical Lane (SMC & Price Action)
-* **Break of Structure (BOS)**: Detects trend continuation.
-* **Change of Character (CHoCH)**: Detects institutional trend reversals.
-* **Order Blocks (OB)**: Locates demand/supply zones where banks placed orders.
-* **Fair Value Gaps (FVG)**: Identifies market imbalances where price returns to fill.
-* **Liquidity Sweeps**: Tracks stop hunts above equal highs (BSL) or below equal lows (SSL).
-
-### 2. [F] Flow Lane (Volume Delta & Imbalance)
-* Cumulative Volume Delta (CVD) estimation per candle.
-* Spot buyer vs seller absorption detection.
-* Identifies exhaustion volume versus aggressive breakout volume.
-
-### 3. [N] News / AI Catalyst Lane
-* Powered by **Google Gemini 2.0 Flash** (free tier: 15 req/min, 1,500 req/day).
-* Synthesizes live market catalyst context and overall narrative tone (`Positive`, `Negative`, `Neutral`).
-* Has an automated algorithmic sentiment proxy if no API key is provided.
-
-### 4. [M] Macro & Session Lane
-* Tracks London Morning, London/NY Overlap Killzones, and NY Afternoon.
-* ATR volatility regime filtering (avoids trading when volatility makes stops too wide).
-
----
-
-## Deploying Updates to GitHub Pages
-
-To sync these changes with your GitHub Pages deployment:
+Run these commands in Terminal:
 
 ```bash
 cd /Users/yashwanttt/.gemini/antigravity/scratch/trading-signal-ai
-
-git add .
-git commit -m "feat: complete overhaul inspired by Deeepr.ai (4-lane engine, hero card, strategy builder)"
+git add -A
+git commit -m "feat: TradersZone.ai overhaul — fix currency pair switching, zero-key Gold & Forex, clean AI reason, dynamic theme toggle"
 git push origin main
 ```
 
-Your site will update in ~60 seconds at:
-**[https://yashwanth637.github.io/trading-signal-ai/](https://yashwanth637.github.io/trading-signal-ai/)**
-
----
-
-## Disclaimer
-
-> ⚠️ **This tool is for research and educational purposes only.**
-> Financial trading involves substantial risk of loss. Signals and analytical outputs generated by this system do not constitute financial advice. Always practice responsible risk management.
-
----
-
-## License
-
-MIT © 2026 [yashwanth637](https://github.com/yashwanth637)
+Your live site at **[https://yashwanth637.github.io/trading-signal-ai/](https://yashwanth637.github.io/trading-signal-ai/)** will update automatically!

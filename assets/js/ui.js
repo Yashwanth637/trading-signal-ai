@@ -1,12 +1,12 @@
 /**
- * ui.js — Deeepr.ai Dashboard UI Manager
+ * ui.js — TradersZone.ai UI Controller
  *
  * Controls:
- *  - Hero Verdict Bar (LONG / SHORT / WAIT, 4-lane agreement, exact levels)
- *  - 4-Lane Analysis Cards ([T] Tech, [F] Flow, [N] News, [M] Macro)
- *  - Graded Calls Tracker Scorecard & Real-time Stream
- *  - Plain-English Strategy Builder View & Backtest Output
- *  - Settings Modal, Ticker, Toasts
+ *  - Main Signal & 1–2 Sentence AI Explanation Card
+ *  - Top Hero Verdict Bar with exact levels
+ *  - Dynamic Light & Dark Theme Switching
+ *  - Live Graded Calls Scorecard
+ *  - Settings Modal, Real-time Ticker, Toasts
  */
 
 import { Settings } from './settings.js';
@@ -17,39 +17,27 @@ export class UI {
     this._toastTimer = null;
   }
 
-  // ─── HERO VERDICT & LEVELS BAR ──────────────────────────────────
+  // ─── HERO VERDICT BAR ───────────────────────────────────────────
   renderHeroVerdict(verdictData) {
-    const { verdict, agreementCount, levels, lanes, waitReason, currentPrice } = verdictData;
+    const { verdict, levels, aiReason, currentPrice } = verdictData;
 
-    // 1. Verdict Pill
+    // 1. Verdict Badge
     const pill = document.getElementById('hero-verdict-pill');
     const pillText = document.getElementById('hero-verdict-text');
-    const pulseDot = document.getElementById('hero-pulse-dot');
-    const agreeText = document.getElementById('hero-agreement-text');
+    const heroSentence = document.getElementById('hero-sentence-text');
 
     if (pill && pillText) {
       pill.className = `verdict-badge ${verdict.toLowerCase()}`;
-      pillText.textContent = verdict;
-      const icon = verdict === 'LONG' ? '↗' : verdict === 'SHORT' ? '↘' : '⏸';
+      const icon = verdict === 'BUY' ? '▲' : verdict === 'SELL' ? '▼' : '⏸';
       pill.firstElementChild.textContent = icon;
+      pillText.textContent = verdict;
     }
 
-    if (pulseDot && agreeText) {
-      pulseDot.className = `pulse-dot ${verdict.toLowerCase()}`;
-      if (verdict === 'WAIT') {
-        agreeText.textContent = waitReason || 'Lanes in conflict — standing aside';
-      } else {
-        agreeText.textContent = `${agreementCount} of 4 lanes agree · Momentum holds`;
-      }
+    if (heroSentence) {
+      heroSentence.textContent = aiReason;
     }
 
-    // 2. 4-Lane Micro Badges in Hero Bar
-    this._updateHeroTag('tag-tech', lanes.technical.bias !== 'NEUTRAL');
-    this._updateHeroTag('tag-flow', lanes.flow.bias !== 'NEUTRAL');
-    this._updateHeroTag('tag-news', lanes.news.bias !== 'NEUTRAL');
-    this._updateHeroTag('tag-macro', lanes.macro.bias === 'FAVORABLE');
-
-    // 3. Exact Levels
+    // 2. Exact Levels
     const entryEl = document.getElementById('hl-entry');
     const targetEl = document.getElementById('hl-target');
     const stopEl = document.getElementById('hl-stop');
@@ -67,140 +55,106 @@ export class UI {
     }
   }
 
-  _updateHeroTag(id, isLit) {
-    const el = document.getElementById(id);
-    if (el) {
-      el.classList.toggle('lit', isLit);
+  // ─── MAIN SIGNAL & AI REASON CARD (SIDEBAR) ─────────────────────
+  renderMainSignalCard(verdictData) {
+    const { verdict, confidence, aiReason, levels, currentPrice } = verdictData;
+
+    const card = document.getElementById('main-signal-card');
+    const titleEl = document.getElementById('msc-title');
+    const confEl = document.getElementById('msc-confidence');
+    const aiTextEl = document.getElementById('msc-ai-reason');
+
+    const lvlEntry = document.getElementById('lvl-entry');
+    const lvlTarget = document.getElementById('lvl-target');
+    const lvlStop = document.getElementById('lvl-stop');
+    const lvlRR = document.getElementById('lvl-rr');
+
+    if (card) {
+      card.className = `main-signal-card ${verdict.toLowerCase()}`;
     }
+
+    if (titleEl) {
+      const label = verdict === 'BUY' ? '▲ BUY SIGNAL' : verdict === 'SELL' ? '▼ SELL SIGNAL' : '⏸ WAIT — STAND ASIDE';
+      titleEl.textContent = label;
+      titleEl.className = `msc-verdict-title ${verdict.toLowerCase()}`;
+    }
+
+    if (confEl) {
+      confEl.textContent = `${confidence}% Confidence`;
+    }
+
+    if (aiTextEl) {
+      aiTextEl.textContent = aiReason;
+    }
+
+    // Key Levels
+    if (lvlEntry) lvlEntry.textContent = this._fmt(levels.entry || currentPrice);
+    if (lvlTarget) lvlTarget.textContent = levels.target ? `${this._fmt(levels.target)} (+${levels.targetPct}%)` : '—';
+    if (lvlStop) lvlStop.textContent = levels.stop ? `${this._fmt(levels.stop)} (${levels.stopPct}%)` : '—';
+    if (lvlRR) lvlRR.textContent = levels.riskReward ? `1:${levels.riskReward}` : '—';
   }
 
-  // ─── 4-LANE SIDEBAR BREAKDOWN ───────────────────────────────────
-  renderLaneBreakdown(verdictData) {
-    const { lanes, verdict, waitReason } = verdictData;
-
-    // Technical Lane
-    const tStat = document.getElementById('lc-tech-status');
-    const tRead = document.getElementById('lc-tech-read');
-    if (tStat && tRead) {
-      const cls = lanes.technical.bias === 'BULLISH' ? 'pos' : lanes.technical.bias === 'BEARISH' ? 'neg' : 'neu';
-      tStat.className = `status-chip ${cls}`;
-      tStat.textContent = lanes.technical.bias;
-      tRead.textContent = lanes.technical.summary;
-    }
-
-    // Flow Lane
-    const fStat = document.getElementById('lc-flow-status');
-    const fRead = document.getElementById('lc-flow-read');
-    if (fStat && fRead) {
-      const cls = lanes.flow.bias === 'INFLOW' ? 'pos' : lanes.flow.bias === 'OUTFLOW' ? 'neg' : 'neu';
-      fStat.className = `status-chip ${cls}`;
-      fStat.textContent = lanes.flow.bias;
-      fRead.textContent = `${lanes.flow.summary} (${lanes.flow.buyRatio || 50}% buy delta)`;
-    }
-
-    // News Lane
-    const nStat = document.getElementById('lc-news-status');
-    const nRead = document.getElementById('lc-news-read');
-    if (nStat && nRead) {
-      const cls = lanes.news.bias === 'POSITIVE' ? 'pos' : lanes.news.bias === 'NEGATIVE' ? 'neg' : 'neu';
-      nStat.className = `status-chip ${cls}`;
-      nStat.textContent = lanes.news.bias;
-      nRead.textContent = `${lanes.news.summary} [${lanes.news.source}]`;
-    }
-
-    // Macro Lane
-    const mStat = document.getElementById('lc-macro-status');
-    const mRead = document.getElementById('lc-macro-read');
-    if (mStat && mRead) {
-      const cls = lanes.macro.bias === 'FAVORABLE' ? 'pos' : lanes.macro.bias === 'HIGH_RISK' ? 'neg' : 'cau';
-      mStat.className = `status-chip ${cls}`;
-      mStat.textContent = lanes.macro.bias;
-      mRead.textContent = lanes.macro.summary;
-    }
-
-    // Summary description
-    const desc = document.getElementById('lane-verdict-desc');
-    if (desc) {
-      if (verdict === 'WAIT') {
-        desc.textContent = waitReason || 'Lanes disagree — waiting for clean 3-lane confluence.';
-      } else {
-        desc.textContent = `${verdict} confirmed: Structure, flow, and narrative agree on the ${verdict === 'LONG' ? 'long' : 'short'} side.`;
-      }
-    }
-  }
-
-  // ─── GRADED CALLS SCORECARD & STREAM ────────────────────────────
+  // ─── GRADED CALLS SCORECARD ─────────────────────────────────────
   renderGradedScorecard(scorecard) {
-    const wrEl = document.getElementById('gc-winrate');
-    const tgEl = document.getElementById('gc-targets');
-    const spEl = document.getElementById('gc-stops');
-    const opEl = document.getElementById('gc-open');
-    const listEl = document.getElementById('graded-calls-list');
+    const wrEl = document.getElementById('sc-winrate');
+    const winEl = document.getElementById('sc-targets');
+    const lossEl = document.getElementById('sc-stops');
+    const openEl = document.getElementById('sc-open');
+    const streamEl = document.getElementById('graded-stream');
 
     if (wrEl) wrEl.textContent = `${scorecard.winRate}%`;
-    if (tgEl) tgEl.textContent = scorecard.targetHits;
-    if (spEl) spEl.textContent = scorecard.stopHits;
-    if (opEl) opEl.textContent = scorecard.openCalls;
+    if (winEl) winEl.textContent = scorecard.targetHits;
+    if (lossEl) lossEl.textContent = scorecard.stopHits;
+    if (openEl) openEl.textContent = scorecard.openCalls;
 
-    if (!listEl) return;
-    listEl.innerHTML = '';
+    if (!streamEl) return;
+    streamEl.innerHTML = '';
 
     if (scorecard.recentCalls.length === 0) {
-      listEl.innerHTML = `
-        <div style="text-align:center;padding:24px;color:var(--text-3);font-size:11px;">
-          No graded calls recorded yet.<br>
-          <span style="font-size:10px;">Actionable calls are graded automatically against live candles.</span>
+      streamEl.innerHTML = `
+        <div style="text-align:center;padding:18px;color:var(--text-3);font-size:11px;">
+          No signals triggered yet.<br>
+          <span style="font-size:10px;">Actionable calls are graded automatically against live ticks.</span>
         </div>`;
       return;
     }
 
-    scorecard.recentCalls.forEach(call => {
+    scorecard.recentCalls.slice(0, 10).forEach(call => {
       const card = document.createElement('div');
-      const gradeCls = call.status === 'TARGET_HIT' ? 'win' : call.status === 'STOP_HIT' ? 'loss' : 'open';
-      const gradeText = call.status === 'TARGET_HIT' ? 'Target Hit ✓' : call.status === 'STOP_HIT' ? 'Stop Hit ✕' : 'Open ⏳';
+      const isWin = call.status === 'TARGET_HIT';
+      const isLoss = call.status === 'STOP_HIT';
+      const statusClass = isWin ? 'pos' : isLoss ? 'neg' : 'neu';
+      const statusLabel = isWin ? 'Target Hit ✓' : isLoss ? 'Stop Hit ✕' : 'Active ⏳';
 
-      card.className = `graded-card ${gradeCls}`;
+      card.style.cssText = `background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--${statusClass});border-radius:6px;padding:8px;font-size:11px;display:flex;flex-direction:column;gap:3px;`;
       card.innerHTML = `
-        <div class="gc-head">
-          <span class="gc-sym">${call.symbol} · ${call.verdict}</span>
-          <span class="gc-grade ${gradeCls}">${gradeText}</span>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-weight:700;font-family:var(--mono);">
+          <span>${call.symbol} · ${call.verdict}</span>
+          <span style="font-size:9px;padding:1px 5px;border-radius:3px;background:var(--${statusClass}-dim);color:var(--${statusClass});">${statusLabel}</span>
         </div>
-        <div class="gc-grid">
-          <div class="gc-cell"><span class="k">Entry</span><span class="v">${this._fmt(call.entry)}</span></div>
-          <div class="gc-cell"><span class="k">Target</span><span class="v" style="color:var(--pos);">${this._fmt(call.target)}</span></div>
-          <div class="gc-cell"><span class="k">Stop</span><span class="v" style="color:var(--neg);">${this._fmt(call.stop)}</span></div>
-          <div class="gc-cell"><span class="k">R:R</span><span class="v">1:${call.riskReward}</span></div>
+        <div style="display:flex;justify-content:space-between;color:var(--text-2);font-family:var(--mono);font-size:10px;">
+          <span>Entry: ${this._fmt(call.entry)}</span>
+          <span>TP: ${this._fmt(call.target)}</span>
+          <span>SL: ${this._fmt(call.stop)}</span>
         </div>
-        ${call.realizedPnlPct ? `
-          <div style="font-size:10px;font-family:var(--mono);color:${call.realizedPnlPct > 0 ? 'var(--pos)' : 'var(--neg)'};margin-top:2px;">
-            Realized Outcome: ${call.realizedPnlPct > 0 ? '+' : ''}${call.realizedPnlPct}%
-          </div>` : ''}
       `;
-      listEl.appendChild(card);
+      streamEl.appendChild(card);
     });
   }
 
-  // ─── STRATEGY BUILDER RENDERING ─────────────────────────────────
-  renderStrategyResults(compiled, backtest) {
-    const compiledBox = document.getElementById('strategy-compiled-box');
-    const rulesList = document.getElementById('strategy-rules-list');
-    const resultsBox = document.getElementById('strategy-backtest-results');
+  // ─── DYNAMIC LIGHT & DARK THEME TOGGLE ───────────────────────────
+  toggleTheme() {
+    const current = Settings.getTheme() || 'dark';
+    const next = current === 'dark' ? 'light' : 'dark';
+    Settings.setTheme(next);
+    this.applyTheme(next);
+    return next;
+  }
 
-    if (compiledBox && rulesList) {
-      compiledBox.style.display = 'flex';
-      rulesList.innerHTML = compiled.conditions.map(c =>
-        `<span style="padding:3px 8px;border-radius:4px;background:var(--card);border:1px solid var(--border);font-size:11px;font-family:var(--mono);color:var(--accent);">✓ ${c.label}</span>`
-      ).join('') + `<span style="padding:3px 8px;border-radius:4px;background:var(--pos-dim);color:var(--pos);border:1px solid rgba(0,240,144,0.3);font-size:11px;font-family:var(--mono);">Target +${compiled.targetPct}%</span>`
-      + `<span style="padding:3px 8px;border-radius:4px;background:var(--neg-dim);color:var(--neg);border:1px solid rgba(255,51,102,0.3);font-size:11px;font-family:var(--mono);">Stop -${compiled.stopPct}%</span>`;
-    }
-
-    if (resultsBox) {
-      resultsBox.style.display = 'flex';
-      document.getElementById('bt-winrate').textContent = `${backtest.winRate}%`;
-      document.getElementById('bt-profitfactor').textContent = backtest.profitFactor;
-      document.getElementById('bt-drawdown').textContent = `${backtest.maxDrawdown}%`;
-      document.getElementById('bt-trades').textContent = backtest.totalTrades;
-    }
+  applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    const btn = document.getElementById('theme-btn');
+    if (btn) btn.textContent = theme === 'dark' ? '☀' : '☾';
   }
 
   // ─── PRICE TICKER ───────────────────────────────────────────────
@@ -223,12 +177,8 @@ export class UI {
     const srcTag = document.getElementById('feed-src-tag');
 
     if (statusText) statusText.textContent = text;
-    if (statusDot) {
-      statusDot.className = `status-dot ${type}`;
-    }
-    if (srcTag && source) {
-      srcTag.textContent = source;
-    }
+    if (statusDot) statusDot.className = `status-dot ${type}`;
+    if (srcTag && source) srcTag.textContent = source;
   }
 
   // ─── TOAST NOTIFICATIONS ────────────────────────────────────────
@@ -268,9 +218,8 @@ export class UI {
 
   _fmt(price) {
     if (!price && price !== 0) return '—';
-    if (price >= 10000) return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    if (price >= 100)   return price.toFixed(2);
-    if (price >= 1)     return price.toFixed(4);
+    if (price >= 1000) return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (price >= 1) return price.toFixed(4);
     return price.toFixed(6);
   }
 }
