@@ -1,11 +1,8 @@
 /**
  * app.js — TradersZone.ai Application Bootstrap
  *
- * Coordinates:
- *   - Symbol and Market selection (Crypto, Gold, Forex)
- *   - DataFeed subscriptions (Zero-key Binance + PAXG Gold + Forex)
- *   - Chart updates and theme transitions
- *   - Main Signal & Simple AI Explanation rendering
+ * Guaranteed non-blocking event listener registration,
+ * instant Light/Dark theme switching, and seamless currency pair switching.
  */
 
 import { DataFeed } from './dataFeed.js';
@@ -44,20 +41,51 @@ let currentSymbol = Settings.getLastSymbol();
 let currentTF = Settings.getLastTF() || '60';
 let currentMarket = Settings.getLastMarket() || 'CRYPTO';
 
-async function init() {
-  ui = new UI();
-  const initialTheme = Settings.getTheme() || 'dark';
-  ui.applyTheme(initialTheme);
+// ── GLOBAL FAIL-SAFE WINDOW METHODS ───────────────────────────────
+window.toggleTheme = function () {
+  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  Settings.setTheme(next);
 
-  // Setup dropdowns
+  const btn = document.getElementById('theme-btn');
+  if (btn) btn.textContent = next === 'dark' ? '☀' : '☾';
+
+  if (chartManager) chartManager.setTheme(next);
+  if (ui) ui.toast(`Theme: ${next.toUpperCase()}`, 'info', 1500);
+};
+
+window.onSymbolSelect = function (val) {
+  if (!val || val === currentSymbol) return;
+  currentSymbol = val;
+  Settings.setLastSymbol(val);
+  loadMarketData(currentSymbol, currentTF, currentMarket);
+};
+
+// ── INITIALIZATION ────────────────────────────────────────────────
+function init() {
+  ui = new UI();
+  window.ui = ui;
+
+  // 1. Wire event listeners immediately and synchronously (non-blocking)
+  wireEventListeners();
+
+  // 2. Set initial theme
+  const initialTheme = Settings.getTheme() || 'dark';
+  document.documentElement.setAttribute('data-theme', initialTheme);
+  const themeBtn = document.getElementById('theme-btn');
+  if (themeBtn) themeBtn.textContent = initialTheme === 'dark' ? '☀' : '☾';
+
+  // 3. Populate dropdowns
   populateSymbolDropdown(currentMarket);
   setDropdownValue('sym-select', currentSymbol);
 
-  // Initialize Chart
+  // 4. Initialize Chart
   chartManager = new ChartManager('main-chart', 'vol-chart');
   chartManager.init(initialTheme);
+  window.chartManager = chartManager;
 
-  // Initialize Signal Engine
+  // 5. Initialize Signal Engine
   signalEngine = new SignalEngine(
     chartManager,
     (verdictData) => {
@@ -75,11 +103,10 @@ async function init() {
     }
   );
 
-  // Initialize Market Data Feed
+  // 6. Initialize Data Feed
   dataFeed = new DataFeed();
 
   dataFeed.on('history', (candles) => {
-    // Clean transition to new symbol's data
     chartManager.clearMarkers();
     chartManager.clearProjectionZones();
     chartManager.clearSLTPLines();
@@ -88,7 +115,6 @@ async function init() {
     signalEngine.start(currentSymbol, currentTF, currentMarket);
     ui.setStatus({ text: `Live: ${currentSymbol} (${currentTF})`, type: 'ok', source: currentMarket });
 
-    // Run analysis immediately on the newly loaded pair
     signalEngine.analyzeNow(candles);
     ui.renderGradedScorecard(signalEngine.tracker.getScorecard());
   });
@@ -114,23 +140,20 @@ async function init() {
     ui.toast(msg, 'warning', 4000);
   });
 
-  // Request browser notifications
-  await Notifications.requestPermission();
+  // 7. Non-blocking permission request (does not block initialization)
+  Notifications.requestPermission().catch(() => {});
 
-  // Wire Event Listeners
-  wireEventListeners();
-
-  // Load initial symbol data
-  await loadMarketData(currentSymbol, currentTF, currentMarket);
+  // 8. Load initial symbol data
+  loadMarketData(currentSymbol, currentTF, currentMarket);
 }
 
 async function loadMarketData(symbol, tf, market) {
-  signalEngine.stop();
-  chartManager.clearMarkers();
-  chartManager.clearProjectionZones();
-  chartManager.clearSLTPLines();
+  signalEngine?.stop();
+  chartManager?.clearMarkers();
+  chartManager?.clearProjectionZones();
+  chartManager?.clearSLTPLines();
 
-  ui.setStatus({ text: `Loading ${symbol} (${tf})…`, type: 'info', source: market });
+  ui.setStatus({ text: `Subscribing to ${symbol} (${tf})…`, type: 'info', source: market });
 
   try {
     await dataFeed.subscribe(symbol, tf, market);
@@ -140,14 +163,17 @@ async function loadMarketData(symbol, tf, market) {
 }
 
 function wireEventListeners() {
-  // Currency Pair Selector Change
-  document.getElementById('sym-select')?.addEventListener('change', (e) => {
-    currentSymbol = e.target.value;
-    Settings.setLastSymbol(currentSymbol);
-    loadMarketData(currentSymbol, currentTF, currentMarket);
+  // Theme Toggle Button
+  document.getElementById('theme-btn')?.addEventListener('click', () => {
+    window.toggleTheme();
   });
 
-  // Market Switcher (Crypto vs Forex/Gold)
+  // Symbol Dropdown
+  document.getElementById('sym-select')?.addEventListener('change', (e) => {
+    window.onSymbolSelect(e.target.value);
+  });
+
+  // Market Switcher (Crypto vs Forex & Gold)
   document.getElementById('mkt-crypto')?.addEventListener('click', () => switchMarket('CRYPTO'));
   document.getElementById('mkt-forex')?.addEventListener('click', () => switchMarket('FOREX'));
 
@@ -180,13 +206,6 @@ function wireEventListeners() {
         5000
       );
     }
-  });
-
-  // Dynamic Light / Dark Theme Toggle
-  document.getElementById('theme-btn')?.addEventListener('click', () => {
-    const newTheme = ui.toggleTheme();
-    chartManager.setTheme(newTheme);
-    ui.toast(`Theme switched to ${newTheme.toUpperCase()}`, 'info', 2000);
   });
 
   // Notification Button

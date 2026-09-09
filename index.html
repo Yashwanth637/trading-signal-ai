@@ -6,6 +6,16 @@
   <title>TradersZone.ai — AI Trading Signals & Market Intelligence</title>
   <meta name="description" content="Autonomous trading signals using price action, liquidity sweeps, support and resistance, and background AI market intelligence." />
 
+  <!-- Immediate Theme Initializer -->
+  <script>
+    (function() {
+      try {
+        var t = localStorage.getItem('tsai_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', t);
+      } catch(e) {}
+    })();
+  </script>
+
   <!-- Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -43,8 +53,8 @@
       <button class="mkt-btn" data-market="FOREX" id="mkt-forex">Forex & Gold</button>
     </div>
 
-    <!-- Currency Pair Dropdown -->
-    <select id="sym-select" title="Select Asset Pair"></select>
+    <!-- Currency Pair Dropdown with Direct Event Handler -->
+    <select id="sym-select" onchange="window.onSymbolSelect && window.onSymbolSelect(this.value)" title="Select Asset Pair"></select>
 
     <!-- Real-time Live Price Ticker -->
     <div class="ticker-display">
@@ -54,8 +64,8 @@
 
     <div class="spacer"></div>
 
-    <!-- Theme Toggle (Light / Dark) -->
-    <button class="icon-btn" id="theme-btn" title="Toggle Light / Dark Mode">☀</button>
+    <!-- Theme Toggle (Light / Dark) with Direct Inline Handler -->
+    <button class="icon-btn" id="theme-btn" onclick="window.toggleTheme && window.toggleTheme()" title="Toggle Light / Dark Mode">☀</button>
 
     <!-- Push Notification Button -->
     <button class="icon-btn" id="notif-btn" title="Enable Live Browser Push Alerts">🔔</button>
@@ -105,11 +115,15 @@
       <button class="tf-chip" data-tf="1D">1d</button>
 
       <span class="spacer"></span>
-      <span style="font-size:11px;color:var(--text-3);margin-right:6px;">Projection Forecast: Active</span>
+      <!-- Deeepr Market Buoyancy Indicator HUD -->
+      <span class="buoyancy-hud-tag" id="buoyancy-hud">⚡ Buoyancy: 84% Bullish Float</span>
     </div>
 
     <!-- Lightweight Charts Candlestick Container -->
-    <div id="main-chart"></div>
+    <div id="main-chart">
+      <!-- DEEEPR BUOYANCY FLOATING LEVEL CARDS OVERLAY -->
+      <div id="chart-buoyancy-overlay"></div>
+    </div>
 
     <!-- Synced Volume Histogram -->
     <div id="vol-chart"></div>

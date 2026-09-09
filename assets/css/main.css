@@ -1,10 +1,10 @@
 /* ─────────────────────────────────────────────────────────────────
-   main.css — TradersZone.ai Design System & Styling
-   Full dynamic Light / Dark theme support with high-contrast surfaces.
+   main.css — TradersZone.ai Design System
+   Full Light & Dark Theme Adaptability + Chart Buoyancy Level Cards
 ───────────────────────────────────────────────────────────────── */
 
 /* ── Dark Theme (TradersZone Obsidian Void) ────────────────────── */
-:root, [data-theme="dark"] {
+:root, html[data-theme="dark"], [data-theme="dark"] {
   --bg:           #03060f;
   --surface:      #080d18;
   --panel:        #0d1424;
@@ -15,7 +15,7 @@
   --border-hi:    #243657;
 
   --accent:       #00d4ff;
-  --accent-glow:  rgba(0, 212, 255, 0.15);
+  --accent-glow:  rgba(0, 212, 255, 0.16);
   --purple:       #a855f7;
 
   --pos:          #00f090;
@@ -29,34 +29,36 @@
   --text-2:       #94a3b8;
   --text-3:       #475569;
   --scrollbar:    #1c2b47;
+  --chart-bg:     #03060f;
 }
 
-/* ── Light Theme (Clean Crisp Modern Dashboard) ─────────────────── */
-[data-theme="light"] {
-  --bg:           #f8fafc;
-  --surface:      #ffffff;
-  --panel:        #f1f5f9;
-  --card:         #ffffff;
-  --card-hover:   #f8fafc;
-  --input:        #f8fafc;
-  --border:       #e2e8f0;
-  --border-hi:    #cbd5e1;
+/* ── Light Theme (Clean High-Contrast Dashboard) ────────────────── */
+html[data-theme="light"], [data-theme="light"] {
+  --bg:           #f4f6fa !important;
+  --surface:      #ffffff !important;
+  --panel:        #edf1f7 !important;
+  --card:         #ffffff !important;
+  --card-hover:   #f8fafc !important;
+  --input:        #edf1f7 !important;
+  --border:       #d8e0ec !important;
+  --border-hi:    #b8c5d8 !important;
 
-  --accent:       #0284c7;
-  --accent-glow:  rgba(2, 132, 199, 0.12);
-  --purple:       #9333ea;
+  --accent:       #0284c7 !important;
+  --accent-glow:  rgba(2, 132, 199, 0.14) !important;
+  --purple:       #7e22ce !important;
 
-  --pos:          #059669;
-  --pos-dim:      rgba(5, 150, 105, 0.12);
-  --neg:          #e11d48;
-  --neg-dim:      rgba(225, 29, 72, 0.12);
-  --warn:         #d97706;
-  --warn-dim:     rgba(217, 119, 6, 0.12);
+  --pos:          #059669 !important;
+  --pos-dim:      rgba(5, 150, 105, 0.14) !important;
+  --neg:          #dc2626 !important;
+  --neg-dim:      rgba(220, 38, 38, 0.14) !important;
+  --warn:         #d97706 !important;
+  --warn-dim:     rgba(217, 119, 6, 0.14) !important;
 
-  --text-1:       #0f172a;
-  --text-2:       #475569;
-  --text-3:       #94a3b8;
-  --scrollbar:    #cbd5e1;
+  --text-1:       #0f172a !important;
+  --text-2:       #334155 !important;
+  --text-3:       #64748b !important;
+  --scrollbar:    #cbd5e1 !important;
+  --chart-bg:     #ffffff !important;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -66,7 +68,7 @@ html, body {
   overflow: hidden;
   background: var(--bg);
   color: var(--text-1);
-  font-family: 'Inter', -apple-system, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 13px;
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
@@ -77,7 +79,7 @@ html, body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 99px; }
 
-/* ── App Grid Layout ────────────────────────────────────────────── */
+/* ── Layout Grid ────────────────────────────────────────────────── */
 #app {
   display: grid;
   grid-template-rows: 50px 42px 1fr 28px;
@@ -89,9 +91,10 @@ html, body {
     "status status";
   height: 100vh;
   background: var(--bg);
+  transition: background 0.18s ease;
 }
 
-/* ── Navbar ─────────────────────────────────────────────────────── */
+/* ── Top Navbar ─────────────────────────────────────────────────── */
 #navbar {
   grid-area: nav;
   display: flex;
@@ -196,15 +199,16 @@ html, body {
   width: 32px; height: 32px;
   border-radius: 4px;
   border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text-2);
+  background: var(--panel);
+  color: var(--text-1);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 14px;
   transition: 0.15s ease;
 }
-.icon-btn:hover { background: var(--panel); color: var(--text-1); border-color: var(--border-hi); }
+.icon-btn:hover { background: var(--card-hover); border-color: var(--border-hi); }
 
 /* ── Hero Verdict Bar ───────────────────────────────────────────── */
 #hero-verdict-bar {
@@ -275,7 +279,7 @@ html, body {
 .hero-lvl .v.tp { color: var(--pos); }
 .hero-lvl .v.sl { color: var(--neg); }
 
-/* ── Chart Workspace ────────────────────────────────────────────── */
+/* ── Chart Stage & Deeepr Buoyancy Overlay ───────────────────────── */
 #chart-area {
   grid-area: chart;
   display: flex;
@@ -309,25 +313,124 @@ html, body {
 .tf-chip:hover { color: var(--text-1); background: var(--panel); }
 .tf-chip.active { background: var(--accent); color: #ffffff; font-weight: 700; }
 
-.chart-mode-btn {
-  padding: 2px 10px;
-  border-radius: 3px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text-2);
-  font-size: 11px;
-  cursor: pointer;
-  transition: 0.15s ease;
-}
-.chart-mode-btn.active {
-  border-color: var(--accent);
+.buoyancy-hud-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--accent-glow);
   color: var(--accent);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
 }
 
-#main-chart { flex: 1; min-height: 0; }
-#vol-chart  { height: 65px; flex-shrink: 0; border-top: 1px solid var(--border); }
+#main-chart {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+#vol-chart {
+  height: 65px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+}
 
-/* ── Sidebar (Clean Main Signal & AI Explanation) ───────────────── */
+/* ── DEEEPR CHART BUOYANCY FLOATING LEVEL CARDS ─────────────────── */
+#chart-buoyancy-overlay {
+  position: absolute;
+  inset: 36px 0 65px 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 20;
+}
+
+@keyframes floatBuoyancy {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+}
+
+.lvlcard {
+  position: absolute;
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: var(--card);
+  border: 1px solid var(--border-hi);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  user-select: none;
+  cursor: grab;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  animation: floatBuoyancy 3.2s ease-in-out infinite;
+}
+.lvlcard:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  border-color: var(--accent);
+}
+.lvlcard:active { cursor: grabbing; animation: none; }
+.lvlcard.sl-lvlcard { animation-delay: -1.6s; }
+
+.lvlcard .bdg {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+.lvlcard .bdg.tp { background: var(--pos-dim); color: var(--pos); }
+.lvlcard .bdg.sl { background: var(--neg-dim); color: var(--neg); }
+
+.lvlcard .val.tp { color: var(--pos); }
+.lvlcard .val.sl { color: var(--neg); }
+
+.lvlcard .grip {
+  color: var(--text-3);
+  font-size: 11px;
+  letter-spacing: -1px;
+  margin-left: 2px;
+  opacity: 0.6;
+}
+.lvlcard:hover .grip { opacity: 1; color: var(--accent); }
+
+.entry-tag {
+  position: absolute;
+  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.chip-pct {
+  position: absolute;
+  pointer-events: none;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--pos-dim);
+  color: var(--pos);
+  border: 1px solid rgba(0, 240, 144, 0.3);
+}
+
+/* ── Sidebar (Clean Main Signal & AI Reason) ────────────────────── */
 #sidebar {
   grid-area: sidebar;
   display: flex;
@@ -340,7 +443,6 @@ html, body {
   transition: background 0.18s ease;
 }
 
-/* ── Prominent Main Signal Card ─────────────────────────────────── */
 .main-signal-card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -380,7 +482,6 @@ html, body {
   border: 1px solid var(--border);
 }
 
-/* ── AI Explanation Box ─────────────────────────────────────────── */
 .ai-reason-box {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -406,7 +507,6 @@ html, body {
   line-height: 1.6;
 }
 
-/* ── Key Levels Grid ────────────────────────────────────────────── */
 .levels-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -426,7 +526,6 @@ html, body {
 .lvl-card .v.tp { color: var(--pos); }
 .lvl-card .v.sl { color: var(--neg); }
 
-/* ── Performance Scorecard ──────────────────────────────────────── */
 .scorecard-box {
   background: var(--card);
   border: 1px solid var(--border);
@@ -464,7 +563,7 @@ html, body {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(3, 6, 15, 0.7);
+  background: rgba(3, 6, 15, 0.75);
   backdrop-filter: blur(6px);
   z-index: 1000;
   align-items: center;

@@ -1,8 +1,11 @@
 /**
  * chart.js — TradersZone.ai Lightweight Charts v4 Wrapper
  *
- * Full dynamic Light/Dark theme toggling, clean symbol switching,
- * forward-projected shaded TP/SL zones, and SMC structural markers.
+ * Implements:
+ *   - Deeepr.ai Buoyancy Floating Level Cards (TP, SL, Entry) with grip handles and physics animation
+ *   - Complete dynamic Light & Dark Theme Adaptability
+ *   - Forward-projected shaded TP & SL forecast zones
+ *   - Clean pair switching and price line management
  */
 
 class RectZonePrimitive {
@@ -111,6 +114,7 @@ export class ChartManager {
   constructor(mainContainerId, volContainerId) {
     this._mainEl = document.getElementById(mainContainerId);
     this._volEl = document.getElementById(volContainerId);
+    this._buoyancyOverlay = document.getElementById('chart-buoyancy-overlay');
     this._chart = null;
     this._volChart = null;
     this._candles = null;
@@ -192,6 +196,7 @@ export class ChartManager {
 
       this._chart.timeScale().subscribeVisibleLogicalRangeChange(r => {
         if (r) this._volChart.timeScale().setVisibleLogicalRange(r);
+        this._repositionBuoyancyCards();
       });
       this._volChart.timeScale().subscribeVisibleLogicalRangeChange(r => {
         if (r) this._chart.timeScale().setVisibleLogicalRange(r);
@@ -201,6 +206,7 @@ export class ChartManager {
     new ResizeObserver(() => {
       this._chart.applyOptions({ autoSize: true });
       this._volChart?.applyOptions({ autoSize: true });
+      this._repositionBuoyancyCards();
     }).observe(this._mainEl);
   }
 
@@ -225,6 +231,7 @@ export class ChartManager {
       })));
     }
     this._chart.timeScale().fitContent();
+    this._repositionBuoyancyCards();
   }
 
   updateCandle(candle) {
@@ -239,6 +246,7 @@ export class ChartManager {
     }
   }
 
+  // ─── DEEEPR FORWARD-PROJECTED SHADED ZONES + BUOYANCY CARDS ──────
   drawProjectionZones({ entry, target, stop, verdict, startTime }) {
     if (!this._zoneLayer || !target || !stop) return;
     this.clearProjectionZones();
@@ -258,6 +266,104 @@ export class ChartManager {
       this._zoneLayer.attachPrimitive(slPrim);
       this._projectionPrimitives.push(tpPrim, slPrim);
     }
+
+    // Render Deeepr Buoyancy Floating Level Cards
+    this._renderBuoyancyLevelCards({ entry, target, stop, verdict });
+  }
+
+  _renderBuoyancyLevelCards({ entry, target, stop, verdict }) {
+    if (!this._buoyancyOverlay || !this._candles) return;
+    this._buoyancyOverlay.innerHTML = '';
+
+    const yTP = this._candles.priceToCoordinate(target) || 70;
+    const ySL = this._candles.priceToCoordinate(stop) || 240;
+    const yEntry = this._candles.priceToCoordinate(entry) || 150;
+    const targetPct = +(((Math.abs(target - entry)) / entry) * 100).toFixed(2);
+
+    this._buoyancyOverlay.innerHTML = `
+      <div class="chip-pct" style="top: ${Math.max(10, yTP - 26)}px; right: 90px;">+${targetPct}% Target</div>
+      <div class="lvlcard tp-lvlcard" id="card-tp" style="top: ${Math.max(15, yTP - 14)}px; right: 90px;" title="Drag to adjust Take Profit">
+        <span class="bdg tp">TP</span>
+        <span class="val tp">${target}</span>
+        <span class="grip">⋮ ⋮</span>
+      </div>
+      <div class="entry-tag" style="top: ${Math.max(15, yEntry - 10)}px; right: 190px;">
+        <span style="color:var(--text-3);text-transform:uppercase;font-size:9px;">Entry</span> ${entry}
+      </div>
+      <div class="lvlcard sl-lvlcard" id="card-sl" style="top: ${Math.max(15, ySL - 14)}px; right: 90px;" title="Drag to adjust Stop Loss">
+        <span class="bdg sl">SL</span>
+        <span class="val sl">${stop}</span>
+        <span class="grip">⋮ ⋮</span>
+      </div>
+    `;
+
+    // Make buoyancy cards interactively draggable along chart
+    this._makeDraggable('card-tp', (newY) => {
+      const newPrice = this._candles.coordinateToPrice(newY);
+      if (newPrice) {
+        document.querySelector('#card-tp .val.tp').textContent = newPrice.toFixed(2);
+        this.showSLTPLines({ entryPrice: entry, stopLoss: stop, takeProfit: newPrice });
+      }
+    });
+
+    this._makeDraggable('card-sl', (newY) => {
+      const newPrice = this._candles.coordinateToPrice(newY);
+      if (newPrice) {
+        document.querySelector('#card-sl .val.sl').textContent = newPrice.toFixed(2);
+        this.showSLTPLines({ entryPrice: entry, stopLoss: newPrice, takeProfit: target });
+      }
+    });
+  }
+
+  _makeDraggable(elemId, onDragY) {
+    const el = document.getElementById(elemId);
+    if (!el) return;
+
+    let isDragging = false;
+    let startY = 0;
+    let startTop = 0;
+
+    const onMouseDown = (e) => {
+      isDragging = true;
+      startY = e.clientY;
+      startTop = parseInt(el.style.top || '0');
+      el.style.animation = 'none';
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    };
+
+    const onMouseMove = (e) => {
+      if (!isDragging) return;
+      const delta = e.clientY - startY;
+      const newTop = Math.max(10, Math.min(360, startTop + delta));
+      el.style.top = `${newTop}px`;
+      onDragY(newTop);
+    };
+
+    const onMouseUp = () => {
+      isDragging = false;
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    el.addEventListener('mousedown', onMouseDown);
+  }
+
+  _repositionBuoyancyCards() {
+    // Re-align on scale change if cards exist
+    const tpEl = document.getElementById('card-tp');
+    const slEl = document.getElementById('card-sl');
+    if (!tpEl || !slEl || !this._candles) return;
+
+    const tpVal = parseFloat(tpEl.querySelector('.val')?.textContent);
+    const slVal = parseFloat(slEl.querySelector('.val')?.textContent);
+
+    if (tpVal && this._candles.priceToCoordinate(tpVal) !== null) {
+      tpEl.style.top = `${Math.max(10, this._candles.priceToCoordinate(tpVal) - 14)}px`;
+    }
+    if (slVal && this._candles.priceToCoordinate(slVal) !== null) {
+      slEl.style.top = `${Math.max(10, this._candles.priceToCoordinate(slVal) - 14)}px`;
+    }
   }
 
   clearProjectionZones() {
@@ -265,6 +371,9 @@ export class ChartManager {
       try { this._zoneLayer.detachPrimitive(p); } catch {}
     }
     this._projectionPrimitives = [];
+    if (this._buoyancyOverlay) {
+      this._buoyancyOverlay.innerHTML = '';
+    }
   }
 
   drawSMCZones(smcResult) {
@@ -279,7 +388,7 @@ export class ChartManager {
 
     orderBlocks.slice(-4).forEach((ob, i) => {
       const isBull = ob.type === 'BULLISH_OB';
-      const prim = new RectZonePrimitive(ob.top, ob.bottom, ob.time, futureTime, isBull ? 'rgba(0, 212, 255, 0.14)' : 'rgba(168, 85, 247, 0.14)', isBull ? '#00d4ff' : '#a855f7', isBull ? 'OB' : 'OB');
+      const prim = new RectZonePrimitive(ob.top, ob.bottom, ob.time, futureTime, isBull ? 'rgba(0, 212, 255, 0.14)' : 'rgba(168, 85, 247, 0.14)', isBull ? '#00d4ff' : '#a855f7', 'OB');
       this._primitives[`ob_${i}`] = prim;
       this._zoneLayer.attachPrimitive(prim);
     });
@@ -312,21 +421,23 @@ export class ChartManager {
 
   showSLTPLines({ entryPrice, stopLoss, takeProfit }) {
     this.clearSLTPLines();
+    const isDark = this._theme === 'dark';
+
     if (entryPrice) {
       this._entLine = this._candles.createPriceLine({
-        price: entryPrice, color: this._theme === 'dark' ? '#ffffff' : '#0f172a',
+        price: entryPrice, color: isDark ? '#ffffff' : '#0f172a',
         lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Solid, axisLabelVisible: true, title: 'Entry',
       });
     }
     if (stopLoss) {
       this._slLine = this._candles.createPriceLine({
-        price: stopLoss, color: '#ff3366',
+        price: stopLoss, color: isDark ? '#ff3366' : '#dc2626',
         lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dotted, axisLabelVisible: true, title: 'SL',
       });
     }
     if (takeProfit) {
       this._tpLine = this._candles.createPriceLine({
-        price: takeProfit, color: '#00f090',
+        price: takeProfit, color: isDark ? '#00f090' : '#059669',
         lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dotted, axisLabelVisible: true, title: 'TP',
       });
     }
@@ -339,36 +450,40 @@ export class ChartManager {
     this._slLine = this._tpLine = this._entLine = null;
   }
 
-  // ─── FULL DYNAMIC LIGHT / DARK THEME TOGGLE ──────────────────────
+  // ─── INSTANT LIGHT & DARK THEME FLIP ─────────────────────────────
   setTheme(theme) {
     this._theme = theme;
     const colors = this._colors(theme);
 
-    this._chart.applyOptions({
-      layout: {
-        background: { type: 'solid', color: colors.bg },
-        textColor: colors.text,
-      },
-      grid: {
-        vertLines: { color: colors.gridLine },
-        horzLines: { color: colors.gridLine },
-      },
-      crosshair: {
-        vertLine: { color: colors.crosshair, labelBackgroundColor: colors.labelBg },
-        horzLine: { color: colors.crosshair, labelBackgroundColor: colors.labelBg },
-      },
-      rightPriceScale: { borderColor: colors.border },
-      timeScale: { borderColor: colors.border },
-    });
+    if (this._chart) {
+      this._chart.applyOptions({
+        layout: {
+          background: { type: 'solid', color: colors.bg },
+          textColor: colors.text,
+        },
+        grid: {
+          vertLines: { color: colors.gridLine },
+          horzLines: { color: colors.gridLine },
+        },
+        crosshair: {
+          vertLine: { color: colors.crosshair, labelBackgroundColor: colors.labelBg },
+          horzLine: { color: colors.crosshair, labelBackgroundColor: colors.labelBg },
+        },
+        rightPriceScale: { borderColor: colors.border },
+        timeScale: { borderColor: colors.border },
+      });
+    }
 
-    this._candles.applyOptions({
-      upColor: colors.bullCandle,
-      downColor: colors.bearCandle,
-      borderUpColor: colors.bullCandle,
-      borderDownColor: colors.bearCandle,
-      wickUpColor: colors.bullCandle,
-      wickDownColor: colors.bearCandle,
-    });
+    if (this._candles) {
+      this._candles.applyOptions({
+        upColor: colors.bullCandle,
+        downColor: colors.bearCandle,
+        borderUpColor: colors.bullCandle,
+        borderDownColor: colors.bearCandle,
+        wickUpColor: colors.bullCandle,
+        wickDownColor: colors.bearCandle,
+      });
+    }
 
     if (this._volChart) {
       this._volChart.applyOptions({
@@ -381,24 +496,24 @@ export class ChartManager {
 
   _colors(theme) {
     return theme === 'dark' ? {
-      bg: '#03060f', // TradersZone Obsidian
+      bg: '#03060f', // TradersZone Obsidian Void
       text: '#94a3b8',
       gridLine: 'rgba(255, 255, 255, 0.02)',
-      border: '#151f33',
+      border: '#162238',
       crosshair: '#00d4ff',
-      labelBg: '#0a101d',
+      labelBg: '#090f1c',
       bullCandle: '#00f090',
       bearCandle: '#ff3366',
       volBar: 'rgba(0, 212, 255, 0.35)',
     } : {
       bg: '#ffffff', // Clean Pure White Light Mode
       text: '#334155',
-      gridLine: '#f1f5f9',
-      border: '#e2e8f0',
+      gridLine: '#edf1f7',
+      border: '#d8e0ec',
       crosshair: '#0284c7',
       labelBg: '#f8fafc',
       bullCandle: '#059669',
-      bearCandle: '#e11d48',
+      bearCandle: '#dc2626',
       volBar: 'rgba(2, 132, 199, 0.35)',
     };
   }
