@@ -42,7 +42,12 @@ let currentTF = Settings.getLastTF() || '60';
 let currentMarket = Settings.getLastMarket() || 'CRYPTO';
 
 // ── GLOBAL FAIL-SAFE WINDOW METHODS ───────────────────────────────
+let _lastThemeToggle = 0;
 window.toggleTheme = function () {
+  const now = Date.now();
+  if (now - _lastThemeToggle < 250) return; // Prevent double-trigger cancellation
+  _lastThemeToggle = now;
+
   const cur = document.documentElement.getAttribute('data-theme') || 'dark';
   const next = cur === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
@@ -51,8 +56,11 @@ window.toggleTheme = function () {
   const btn = document.getElementById('theme-btn');
   if (btn) btn.textContent = next === 'dark' ? '☀' : '☾';
 
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+  if (metaTheme) metaTheme.setAttribute('content', next === 'dark' ? '#03060f' : '#f4f6fa');
+
   if (chartManager) chartManager.setTheme(next);
-  if (ui) ui.toast(`Theme: ${next.toUpperCase()}`, 'info', 1500);
+  if (ui) ui.toast(`Theme: ${next.toUpperCase()}`, 'info', 1200);
 };
 
 window.onSymbolSelect = function (val) {

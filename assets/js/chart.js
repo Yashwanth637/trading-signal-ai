@@ -575,6 +575,14 @@ export class ChartManager {
         timeScale: { borderColor: colors.border },
       });
     }
+
+    if (this._vol) {
+      this._vol.applyOptions({ color: colors.volBar });
+    }
+
+    if (this._entLine) {
+      this._entLine.applyOptions({ color: theme === 'dark' ? '#7c8fe8' : '#4f5fbf' });
+    }
   }
 
   _colors(theme) {

@@ -14,6 +14,7 @@ import { FourLaneEngine } from './fourLaneEngine.js';
 import { MTFEngine } from './mtfEngine.js';
 import { PerformanceTracker } from './performanceTracker.js';
 import { Notifications } from './notifications.js';
+import { AIEngine } from './aiEngine.js';
 
 export class SignalEngine {
   constructor(chartManager, onVerdictUpdate, onCallResolved) {
@@ -71,12 +72,15 @@ export class SignalEngine {
     const htfTrend = this._mtf.getHTFBias();
 
     // 3. Run analysis
-    const verdictData = await this._engine.analyze({
+    let verdictData = await this._engine.analyze({
       candles,
       symbol: this._symbol,
       timeframe: this._timeframe,
       htfTrend,
     });
+
+    // Enhance with Gemini AI synthesis if configured
+    verdictData = await AIEngine.enhanceVerdict({ verdictData, candles });
 
     // 4. Draw Pine Script S/R Horizon Boxes
     if (verdictData.horizonZones) {
@@ -170,12 +174,14 @@ export class SignalEngine {
     this._engine.setMTFMatrix(mtfMatrix);
     const htfTrend = this._mtf.getHTFBias();
 
-    const verdictData = await this._engine.analyze({
+    let verdictData = await this._engine.analyze({
       candles,
       symbol:    this._symbol,
       timeframe: this._timeframe,
       htfTrend,
     });
+
+    verdictData = await AIEngine.enhanceVerdict({ verdictData, candles });
 
     if (verdictData.horizonZones) {
       this._chart.drawHorizonBoxes(verdictData.horizonZones);
