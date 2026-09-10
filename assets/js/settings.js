@@ -7,6 +7,7 @@ const KEYS = {
   GEMINI_KEY:     'tsai_gemini_key',
   AV_KEY:         'tsai_av_key',         // Alpha Vantage
   TD_KEY:         'tsai_td_key',         // Twelve Data (optional)
+  WEBHOOK_URL:    'tsai_webhook_url',    // Discord/Telegram-compatible webhook
   THEME:          'tsai_theme',
   NOTIFICATIONS:  'tsai_notifications',
   AUDIO_ALERTS:   'tsai_audio_alerts',
@@ -16,6 +17,8 @@ const KEYS = {
   LAST_SYMBOL:    'tsai_last_symbol',
   LAST_TF:        'tsai_last_tf',
   LAST_MARKET:    'tsai_last_market',
+  RISK_BALANCE:   'tsai_risk_balance',   // Account balance for risk calc
+  RISK_PCT:       'tsai_risk_pct',       // Risk % for position sizing
 };
 
 export const Settings = {
@@ -38,6 +41,17 @@ export const Settings = {
 
   getAudioAlerts()  { return localStorage.getItem(KEYS.AUDIO_ALERTS)   !== 'false'; },
   setAudioAlerts(b) { localStorage.setItem(KEYS.AUDIO_ALERTS, b); },
+
+  // ─── Webhook ────────────────────────────────────────────────
+  getWebhookURL()   { return localStorage.getItem(KEYS.WEBHOOK_URL)    || ''; },
+  setWebhookURL(u)  { localStorage.setItem(KEYS.WEBHOOK_URL, u.trim()); },
+
+  // ─── Risk Calculator Defaults ───────────────────────────────
+  getRiskBalance()  { return parseFloat(localStorage.getItem(KEYS.RISK_BALANCE) || '10000'); },
+  setRiskBalance(n) { localStorage.setItem(KEYS.RISK_BALANCE, n); },
+
+  getRiskPct()      { return parseFloat(localStorage.getItem(KEYS.RISK_PCT)     || '1'); },
+  setRiskPct(n)     { localStorage.setItem(KEYS.RISK_PCT, n); },
 
   // ─── SMC Engine Tuning ──────────────────────────────────────
   getSMCThreshold()   { return parseInt(localStorage.getItem(KEYS.SMC_THRESHOLD) || '5'); },

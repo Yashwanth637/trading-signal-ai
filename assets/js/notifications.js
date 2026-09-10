@@ -98,6 +98,49 @@ export const Notifications = {
     } catch {}
   },
 
+  /**
+   * POST a JSON payload to the configured webhook URL (Discord/Telegram-compatible).
+   * Discord expects { content: "..." } or { embeds: [...] }.
+   * Custom bots can use the raw payload directly.
+   * @param {Object} payload
+   */
+  async fireWebhook(payload) {
+    const url = Settings.getWebhookURL();
+    if (!url) return;
+
+    try {
+      const body = JSON.stringify({
+        username: 'TradersZone.ai',
+        content:  `**${payload.signal} — ${payload.symbol}**\n` +
+                  `Timeframe: ${payload.timeframe} | Confidence: ${payload.confidence}%\n` +
+                  `Entry: ${payload.entry} | Stop: ${payload.stop} | Target: ${payload.target}\n` +
+                  `R:R = 1:${payload.riskReward} | ${new Date(payload.timestamp).toUTCString()}`,
+        embeds: [{
+          title:       `${payload.signal === 'BUY' ? '🟢' : '🔴'} ${payload.signal} Signal — ${payload.symbol}`,
+          color:       payload.signal === 'BUY' ? 0x00f090 : 0xff3366,
+          fields: [
+            { name: 'Entry',      value: `\`${payload.entry}\``,      inline: true },
+            { name: 'Stop Loss',  value: `\`${payload.stop}\``,       inline: true },
+            { name: 'Target',     value: `\`${payload.target}\``,     inline: true },
+            { name: 'Timeframe',  value: `\`${payload.timeframe}\``,  inline: true },
+            { name: 'Confidence', value: `\`${payload.confidence}%\``, inline: true },
+            { name: 'R:R',        value: `\`1:${payload.riskReward}\``, inline: true },
+          ],
+          timestamp: new Date(payload.timestamp).toISOString(),
+          footer: { text: 'TradersZone.ai · Institutional Signal Platform' },
+        }],
+      });
+
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      });
+    } catch (e) {
+      console.warn('[Notifications] Webhook POST failed:', e.message);
+    }
+  },
+
   isGranted() {
     return this._permission === 'granted';
   },

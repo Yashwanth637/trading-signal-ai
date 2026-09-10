@@ -261,7 +261,46 @@ function wireEventListeners() {
       if (chartManager) chartManager.resize();
     }, 200);
   });
+
+  // Chart Overlay Toggle Buttons (Entry / Targets / SL)
+  document.querySelectorAll('.overlay-toggle-btn').forEach((btn) => {
+    let active = true;
+    btn.addEventListener('click', () => {
+      active = !active;
+      btn.classList.toggle('active', active);
+      const type = btn.dataset.overlay;
+      if (chartManager) chartManager.setOverlayVisibility(type, active);
+    });
+  });
+
+  // Risk Calculator — auto-recalculate when balance/pct inputs change
+  const onRiskChange = () => {
+    if (ui && ui._lastVerdict) {
+      const { levels, verdict, currentPrice, horizonZones } = ui._lastVerdict;
+      if (levels && levels.entry && levels.stop && (verdict === 'BUY' || verdict === 'SELL')) {
+        ui.computeAndRenderRiskCalculator(levels.entry, levels.stop, verdict, levels.riskReward);
+      } else if (currentPrice && currentPrice > 0) {
+        const estStop = horizonZones?.find(z => !z.isResistance && !z.isBreached)?.bottom || +(currentPrice * 0.985);
+        ui.computeAndRenderRiskCalculator(currentPrice, estStop, 'BUY', 2.0);
+      }
+      // Save to settings
+      const balVal = parseFloat(document.getElementById('risk-balance')?.value);
+      const pctVal = parseFloat(document.getElementById('risk-pct')?.value);
+      if (!isNaN(balVal) && balVal > 0) Settings.setRiskBalance(balVal);
+      if (!isNaN(pctVal) && pctVal > 0) Settings.setRiskPct(pctVal);
+    }
+  };
+
+  document.getElementById('risk-balance')?.addEventListener('input', onRiskChange);
+  document.getElementById('risk-pct')?.addEventListener('input', onRiskChange);
+
+  // Populate risk calc defaults from settings
+  const riskBalEl = document.getElementById('risk-balance');
+  const riskPctEl = document.getElementById('risk-pct');
+  if (riskBalEl) riskBalEl.value = Settings.getRiskBalance();
+  if (riskPctEl) riskPctEl.value = Settings.getRiskPct();
 }
+
 
 function switchMarket(market) {
   currentMarket = market;

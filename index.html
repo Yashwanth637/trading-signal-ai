@@ -6,8 +6,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#03060f" />
-  <title>TradersZone.ai — AI Trading Signals & Market Intelligence</title>
-  <meta name="description" content="Autonomous trading signals using price action, liquidity sweeps, support and resistance, and background AI market intelligence." />
+  <title>TradersZone.ai — Institutional Trading Intelligence</title>
+  <meta name="description" content="Institutional-grade trading signals: 8-criteria Confluence Engine, MTF Alignment Matrix, Risk Calculator, and Signal Journal." />
 
   <!-- Immediate Theme Initializer -->
   <script>
@@ -41,7 +41,6 @@
   <header id="navbar">
     <div class="nav-top-row">
       <div class="nav-left">
-        <!-- Brand Logo -->
         <a href="#" class="brand" aria-label="TradersZone.ai">
           <div class="brand-bars">
             <div class="brand-bar"></div>
@@ -54,34 +53,22 @@
       </div>
 
       <div class="nav-right">
-        <!-- Theme Toggle (Light / Dark) with Direct Inline Handler -->
         <button class="icon-btn" id="theme-btn" onclick="window.toggleTheme && window.toggleTheme()" title="Toggle Light / Dark Mode">☀</button>
-
-        <!-- Push Notification Button -->
         <button class="icon-btn" id="notif-btn" title="Enable Live Browser Push Alerts">🔔</button>
-
-        <!-- Analyze Button -->
         <button class="action-btn" id="analyze-btn" title="Run AI Signal Analysis">
           <span>⚡</span>
           <span class="btn-lbl">Analyze</span>
         </button>
-
-        <!-- Settings Gear -->
         <button class="icon-btn" id="settings-btn" title="Settings & Keys">⚙</button>
       </div>
     </div>
 
     <div class="nav-center">
-      <!-- Market Selector (Crypto vs Forex/Gold) -->
       <div class="mkt-toggle">
         <button class="mkt-btn active" data-market="CRYPTO" id="mkt-crypto">Crypto</button>
-        <button class="mkt-btn" data-market="FOREX" id="mkt-forex">Forex & Gold</button>
+        <button class="mkt-btn" data-market="FOREX" id="mkt-forex">Forex &amp; Gold</button>
       </div>
-
-      <!-- Currency Pair Dropdown with Direct Event Handler -->
       <select id="sym-select" onchange="window.onSymbolSelect && window.onSymbolSelect(this.value)" title="Select Asset Pair"></select>
-
-      <!-- Real-time Live Price Ticker -->
       <div class="ticker-display">
         <span class="ticker-price" id="ticker-price">—</span>
         <span class="ticker-chg" id="ticker-chg">—</span>
@@ -97,7 +84,7 @@
       <span id="hero-verdict-text">WAIT</span>
     </div>
 
-    <!-- 1-Sentence Summary Explanation -->
+    <!-- 1-Sentence AI Explanation -->
     <div class="hero-sentence" id="hero-sentence-text">
       Analyzing market structure, order flow, and liquidity…
     </div>
@@ -108,6 +95,20 @@
       <div class="hero-lvl"><span class="k">Target</span><span class="v tp" id="hl-target">—</span></div>
       <div class="hero-lvl"><span class="k">Stop</span><span class="v sl" id="hl-stop">—</span></div>
       <div class="hero-lvl"><span class="k">R:R</span><span class="v" id="hl-rr">—</span></div>
+    </div>
+
+    <!-- MTF Alignment Matrix -->
+    <div class="mtf-wrapper">
+      <div class="mtf-label">MTF Alignment</div>
+      <div id="mtf-matrix" class="mtf-matrix">
+        <!-- Populated by ui.renderMTFMatrix() -->
+        <div class="mtf-cell mtf-neu"><span class="mtf-tf">1M</span><span class="mtf-icon">─</span></div>
+        <div class="mtf-cell mtf-neu"><span class="mtf-tf">5M</span><span class="mtf-icon">─</span></div>
+        <div class="mtf-cell mtf-neu"><span class="mtf-tf">15M</span><span class="mtf-icon">─</span></div>
+        <div class="mtf-cell mtf-neu"><span class="mtf-tf">1H</span><span class="mtf-icon">─</span></div>
+        <div class="mtf-cell mtf-neu"><span class="mtf-tf">4H</span><span class="mtf-icon">─</span></div>
+        <div class="mtf-cell mtf-neu"><span class="mtf-tf">1D</span><span class="mtf-icon">─</span></div>
+      </div>
     </div>
   </section>
 
@@ -124,13 +125,19 @@
       <button class="tf-chip" data-tf="1D">1d</button>
 
       <span class="spacer"></span>
+
+      <!-- Overlay Toggle Buttons -->
+      <button class="overlay-toggle-btn active" data-overlay="entry" title="Toggle Entry Line">Entry</button>
+      <button class="overlay-toggle-btn active" data-overlay="targets" title="Toggle TP Lines">TPs</button>
+      <button class="overlay-toggle-btn active" data-overlay="sl" title="Toggle Stop Loss Line">SL</button>
+
       <!-- Deeepr Market Buoyancy Indicator HUD -->
-      <span class="buoyancy-hud-tag" id="buoyancy-hud">⚡ Buoyancy: 84% Bullish Float</span>
+      <span class="buoyancy-hud-tag" id="buoyancy-hud">⚡ Buoyancy: Live</span>
     </div>
 
     <!-- Lightweight Charts Candlestick Container -->
     <div id="main-chart">
-      <!-- DEEEPR BUOYANCY FLOATING LEVEL CARDS OVERLAY -->
+      <!-- BUOYANCY FLOATING LEVEL CARDS OVERLAY -->
       <div id="chart-buoyancy-overlay"></div>
     </div>
 
@@ -138,8 +145,9 @@
     <div id="vol-chart"></div>
   </main>
 
-  <!-- ─── SIDEBAR: CLEAN MAIN SIGNAL & AI EXPLANATION ────────────── -->
+  <!-- ─── SIDEBAR ────────────────────────────────────────────────── -->
   <aside id="sidebar">
+
     <!-- Main Signal Card -->
     <div class="main-signal-card wait" id="main-signal-card">
       <div class="msc-top">
@@ -147,7 +155,7 @@
         <div class="msc-conf-pill" id="msc-confidence">--% Confidence</div>
       </div>
 
-      <!-- Simple 1–2 Sentence AI Explanation Box -->
+      <!-- Simple 1–2 Sentence AI Explanation -->
       <div class="ai-reason-box">
         <div class="ai-reason-title">
           <span>🤖</span>
@@ -179,7 +187,71 @@
       </div>
     </div>
 
-    <!-- Live Performance Scorecard (The Market Grades Every Call) -->
+    <!-- ─── CONFLUENCE CHECKLIST ─────────────────────────────────── -->
+    <div class="panel-box" id="confluence-section">
+      <div class="panel-header">
+        <span>🎯 Confluence Checklist</span>
+        <span class="panel-badge" id="confluence-score">—</span>
+      </div>
+      <div id="confluence-checklist" class="cf-list">
+        <!-- Populated by ui.renderConfluenceChecklist() -->
+        <div class="cf-placeholder">Run analysis to evaluate confluence criteria…</div>
+      </div>
+    </div>
+
+    <!-- ─── RISK & POSITION CALCULATOR ───────────────────────────── -->
+    <div class="panel-box" id="risk-section">
+      <div class="panel-header">
+        <span>💰 Risk Calculator</span>
+      </div>
+
+      <!-- Inputs -->
+      <div class="risk-inputs">
+        <div class="risk-input-row">
+          <label class="risk-label">Balance ($)</label>
+          <input type="number" id="risk-balance" class="form-input risk-num" value="10000" min="1" step="100" placeholder="10000" />
+        </div>
+        <div class="risk-input-row">
+          <label class="risk-label">Risk %</label>
+          <input type="number" id="risk-pct" class="form-input risk-num" value="1" min="0.1" max="10" step="0.1" placeholder="1" />
+        </div>
+      </div>
+
+      <!-- Output -->
+      <div class="risk-output">
+        <div class="risk-row-main">
+          <span class="risk-lbl">Dollar Risk</span>
+          <span class="risk-val neg" id="risk-dollar">—</span>
+        </div>
+        <div class="risk-row-main">
+          <span class="risk-lbl">Position Size</span>
+          <span class="risk-val" id="risk-size">—</span>
+        </div>
+
+        <!-- Multi-tier TPs -->
+        <div class="risk-tp-grid">
+          <div class="risk-tp-cell">
+            <span class="rtp-label">TP1 <span class="rtp-rr" id="risk-rr1">1:1.5</span></span>
+            <span class="rtp-price tp" id="risk-tp1">—</span>
+            <span class="rtp-pot" id="risk-pot1">+$—</span>
+          </div>
+          <div class="risk-tp-cell">
+            <span class="rtp-label">TP2 <span class="rtp-rr" id="risk-rr2">1:3.0</span></span>
+            <span class="rtp-price tp" id="risk-tp2">—</span>
+            <span class="rtp-pot" id="risk-pot2">+$—</span>
+          </div>
+          <div class="risk-tp-cell runner">
+            <span class="rtp-label">Runner <span class="rtp-rr" id="risk-rr-run">1:5+</span></span>
+            <span class="rtp-price tp" id="risk-runner">—</span>
+            <span class="rtp-pot" style="color:var(--text-3)">Open</span>
+          </div>
+        </div>
+
+        <div class="risk-be-note" id="risk-be-note"></div>
+      </div>
+    </div>
+
+    <!-- ─── SIGNAL ACCURACY TRACKER ─────────────────────────────── -->
     <div id="scorecard-section">
       <div style="font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">
         Signal Accuracy Tracker
@@ -201,13 +273,17 @@
           <div class="sc-item-num" style="color:var(--accent);" id="sc-open">0</div>
           <div class="sc-item-lbl">Open</div>
         </div>
+        <div>
+          <div class="sc-item-num" id="sc-netr" style="color:var(--pos);">+0R</div>
+          <div class="sc-item-lbl">Net R</div>
+        </div>
       </div>
     </div>
 
-    <!-- Recent Signals Stream -->
+    <!-- ─── SIGNAL JOURNAL / RECENT CALLS ──────────────────────── -->
     <div id="recent-calls-section" style="flex:1;display:flex;flex-direction:column;gap:6px;">
       <div style="font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.5px;">
-        Recent Calls
+        Signal Journal
       </div>
       <div id="graded-stream" style="display:flex;flex-direction:column;gap:6px;overflow-y:auto;"></div>
     </div>
@@ -235,9 +311,17 @@
       <span class="mob-icon">🤖</span>
       <span class="mob-label">AI Signal</span>
     </button>
+    <button class="mob-tab-btn" data-target="confluence-section">
+      <span class="mob-icon">🎯</span>
+      <span class="mob-label">Confluence</span>
+    </button>
+    <button class="mob-tab-btn" data-target="risk-section">
+      <span class="mob-icon">💰</span>
+      <span class="mob-label">Risk Calc</span>
+    </button>
     <button class="mob-tab-btn" data-target="scorecard-section">
       <span class="mob-icon">📊</span>
-      <span class="mob-label">Accuracy</span>
+      <span class="mob-label">Journal</span>
     </button>
   </nav>
 
@@ -277,6 +361,39 @@
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <span style="font-size:12px;color:var(--text-1);">Twelve Data Key</span>
         <input type="password" id="cfg-td-key" class="form-input" placeholder="Optional" />
+      </div>
+    </div>
+
+    <!-- Alerts & Webhook -->
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--pos);text-transform:uppercase;margin-bottom:8px;">🔔 Alerts & Webhook</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <span style="font-size:12px;color:var(--text-2);">Audio Alert on Signal</span>
+        <input type="checkbox" id="cfg-audio-alerts" checked />
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <span style="font-size:12px;color:var(--text-2);">Browser Push Notifications</span>
+        <input type="checkbox" id="cfg-notifications" checked />
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-size:12px;color:var(--text-1);">Webhook URL (Discord / Telegram)</div>
+          <div style="font-size:10px;color:var(--text-3);">JSON payload POSTed on every signal</div>
+        </div>
+        <input type="url" id="cfg-webhook-url" class="form-input" placeholder="https://discord.com/api/webhooks/…" style="max-width:200px;" />
+      </div>
+    </div>
+
+    <!-- Risk Calculator Defaults -->
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--warn);text-transform:uppercase;margin-bottom:8px;">💰 Risk Calculator Defaults</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <span style="font-size:12px;color:var(--text-1);">Account Balance ($)</span>
+        <input type="number" id="cfg-risk-balance" class="form-input" placeholder="10000" min="1" style="width:100px;" />
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:12px;color:var(--text-1);">Risk Per Trade (%)</span>
+        <input type="number" id="cfg-risk-pct" class="form-input" placeholder="1" min="0.1" max="10" step="0.1" style="width:80px;" />
       </div>
     </div>
 

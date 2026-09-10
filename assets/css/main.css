@@ -5,6 +5,7 @@
 
 /* ── Dark Theme (TradersZone Obsidian Void) ────────────────────── */
 :root, html[data-theme="dark"], [data-theme="dark"] {
+  --mono: 'JetBrains Mono', monospace;
   --bg:           #03060f;
   --surface:      #080d18;
   --panel:        #0d1424;
@@ -34,6 +35,7 @@
 
 /* ── Light Theme (Clean High-Contrast Dashboard) ────────────────── */
 html[data-theme="light"], [data-theme="light"] {
+  --mono: 'JetBrains Mono', monospace;
   --bg:           #f4f6fa !important;
   --surface:      #ffffff !important;
   --panel:        #edf1f7 !important;
@@ -235,12 +237,14 @@ html, body {
   grid-area: hero;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 8px 16px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
   transition: background 0.18s ease;
+  min-height: 52px;
 }
 #hero-verdict-bar::-webkit-scrollbar { height: 0; }
 
@@ -551,8 +555,9 @@ html, body {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 12px;
-  display: flex;
-  justify-content: space-around;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
   text-align: center;
 }
 .sc-item-num { font-size: 16px; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
@@ -1009,4 +1014,455 @@ html, body {
   }
   .mob-icon { font-size: 13px; }
   .mob-label { font-size: 10px; }
+}
+
+/* =================================================================
+   INSTITUTIONAL UPGRADE — NEW WIDGET STYLES
+   (Confluence Checklist, MTF Matrix, Risk Calculator, Signal Journal)
+================================================================= */
+
+/* ── MTF Alignment Matrix (Hero Bar) ────────────────────────────── */
+.mtf-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.mtf-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.mtf-matrix {
+  display: flex;
+  gap: 4px;
+}
+
+.mtf-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 4px 7px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  cursor: default;
+  transition: all 0.2s ease;
+  min-width: 36px;
+}
+
+.mtf-tf {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.mtf-icon {
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.mtf-bull { border-color: var(--pos); background: var(--pos-dim); }
+.mtf-bull .mtf-icon { color: var(--pos); }
+.mtf-bull .mtf-tf { color: var(--pos); }
+
+.mtf-bear { border-color: var(--neg); background: var(--neg-dim); }
+.mtf-bear .mtf-icon { color: var(--neg); }
+.mtf-bear .mtf-tf { color: var(--neg); }
+
+.mtf-neu .mtf-icon { color: var(--text-3); }
+
+/* ── Confluence Checklist Panel ──────────────────────────────────── */
+.panel-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.panel-badge {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--mono);
+  color: var(--text-1);
+}
+
+.conf-score-num { font-size: 13px; font-family: var(--mono); }
+
+.cf-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cf-placeholder {
+  font-size: 11px;
+  color: var(--text-3);
+  text-align: center;
+  padding: 10px 0;
+}
+
+.cf-row {
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px;
+  border-radius: 5px;
+  font-size: 10px;
+  cursor: default;
+  transition: background 0.15s ease;
+}
+
+.cf-row:hover { background: var(--card-hover); }
+
+.cf-icon {
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+  width: 18px;
+}
+
+.cf-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cf-detail {
+  font-size: 9px;
+  color: var(--text-3);
+  font-family: var(--mono);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.cf-met  { background: var(--pos-dim); }
+.cf-met  .cf-icon  { color: var(--pos); }
+.cf-met  .cf-name  { color: var(--pos); }
+
+.cf-miss { background: var(--neg-dim); }
+.cf-miss .cf-icon  { color: var(--neg); }
+
+.cf-neu  { }
+.cf-neu  .cf-icon  { color: var(--warn); }
+
+/* ── Chart Overlay Toggle Buttons ───────────────────────────────── */
+.overlay-toggle-btn {
+  padding: 3px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text-3);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.overlay-toggle-btn.active {
+  background: var(--accent-glow);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.overlay-toggle-btn:hover {
+  border-color: var(--border-hi);
+  color: var(--text-2);
+}
+
+/* ── Risk Calculator ─────────────────────────────────────────────── */
+.risk-inputs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.risk-input-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.risk-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.risk-num {
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 12px;
+  text-align: right;
+  padding: 5px 8px;
+}
+
+.risk-output {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.risk-row-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.risk-lbl { color: var(--text-2); }
+.risk-val {
+  font-family: var(--mono);
+  font-weight: 700;
+  color: var(--text-1);
+}
+.risk-val.neg { color: var(--neg); }
+
+.risk-tp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.risk-tp-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 7px 8px;
+}
+
+.risk-tp-cell.runner { border-style: dashed; }
+
+.rtp-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rtp-rr {
+  font-size: 9px;
+  color: var(--accent);
+  font-family: var(--mono);
+}
+
+.rtp-price {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--mono);
+  color: var(--text-1);
+}
+
+.rtp-price.tp { color: var(--pos); }
+
+.rtp-pot {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--pos);
+  font-family: var(--mono);
+}
+
+.risk-be-note {
+  font-size: 10px;
+  color: var(--warn);
+  font-style: italic;
+  margin-top: 2px;
+  min-height: 14px;
+}
+
+/* ── Graded Call Cards (Signal Journal) ──────────────────────────── */
+.graded-call-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warn);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: background 0.15s ease;
+}
+
+.graded-call-card:hover { background: var(--card-hover); }
+
+.gcc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.gcc-pair {
+  font-weight: 700;
+  color: var(--text-1);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.gcc-badge {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.gcc-pos { background: var(--pos-dim); color: var(--pos); }
+.gcc-neg { background: var(--neg-dim); color: var(--neg); }
+.gcc-warn { background: var(--warn-dim); color: var(--warn); }
+
+.gcc-levels {
+  display: flex;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--text-2);
+  font-family: var(--mono);
+}
+
+.gcc-levels .tp { color: var(--pos); }
+.gcc-levels .sl { color: var(--neg); }
+
+.gcc-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+}
+
+.gcc-dir { font-weight: 800; font-size: 10px; }
+.gcc-dir.pos { color: var(--pos); }
+.gcc-dir.neg { color: var(--neg); }
+
+.gcc-time { color: var(--text-3); flex: 1; }
+
+.gcc-rmult {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.gcc-rmult.pos { background: var(--pos-dim); color: var(--pos); }
+.gcc-rmult.neg { background: var(--neg-dim); color: var(--neg); }
+
+.gcc-demo {
+  font-size: 8px;
+  color: var(--text-3);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+
+.gcc-exit-time {
+  font-size: 9px;
+  color: var(--text-3);
+  font-style: italic;
+}
+
+/* ── Scorecard: Net R new stat ─────────────────────────────────── */
+.scorecard-box {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+}
+
+/* ── Mobile: New widgets responsive ────────────────────────────── */
+@media (max-width: 768px) {
+  .mtf-wrapper {
+    display: none; /* Hidden in hero bar on mobile — visible in MTF section */
+  }
+
+  .mtf-matrix {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .mtf-cell {
+    min-width: 40px;
+    flex: 1;
+  }
+
+  #confluence-section,
+  #risk-section {
+    margin: 0 10px;
+  }
+
+  .risk-tp-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .risk-inputs {
+    flex-direction: row;
+  }
+
+  .cf-detail {
+    display: none; /* Too narrow on phone */
+  }
+
+  .cf-row {
+    grid-template-columns: 18px 1fr;
+  }
+
+  .scorecard-box {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .overlay-toggle-btn {
+    display: none; /* Hidden on mobile — not enough toolbar space */
+  }
+
+  /* Mobile bottom nav: 5 tabs */
+  #mobile-bottom-nav {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .mob-tab-btn {
+    flex: 1;
+  }
 }

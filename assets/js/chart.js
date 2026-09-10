@@ -457,14 +457,15 @@ export class ChartManager {
     }
   }
 
-  showSLTPLines({ entryPrice, stopLoss, takeProfit }) {
+  showSLTPLines({ entryPrice, stopLoss, takeProfit, tp2 = null, runner = null }) {
     this.clearSLTPLines();
     const isDark = this._theme === 'dark';
+    this._overlayLinesVisible = { entry: true, targets: true, sl: true };
 
     if (entryPrice) {
       this._entLine = this._candles.createPriceLine({
-        price: entryPrice, color: isDark ? '#ffffff' : '#0f172a',
-        lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Solid, axisLabelVisible: true, title: 'Entry',
+        price: entryPrice, color: isDark ? '#7c8fe8' : '#4f5fbf',
+        lineWidth: 2, lineStyle: LightweightCharts.LineStyle.Solid, axisLabelVisible: true, title: 'Entry',
       });
     }
     if (stopLoss) {
@@ -476,17 +477,61 @@ export class ChartManager {
     if (takeProfit) {
       this._tpLine = this._candles.createPriceLine({
         price: takeProfit, color: '#00f090',
-        lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dotted, axisLabelVisible: true, title: 'TP',
+        lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: 'TP1',
+      });
+    }
+    if (tp2) {
+      this._tp2Line = this._candles.createPriceLine({
+        price: tp2, color: '#22c55e',
+        lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: 'TP2',
+      });
+    }
+    if (runner) {
+      this._runnerLine = this._candles.createPriceLine({
+        price: runner, color: '#86efac',
+        lineWidth: 1, lineStyle: LightweightCharts.LineStyle.SparseDotted, axisLabelVisible: true, title: 'Runner',
       });
     }
   }
 
   clearSLTPLines() {
-    if (this._slLine) try { this._candles.removePriceLine(this._slLine); } catch {}
-    if (this._tpLine) try { this._candles.removePriceLine(this._tpLine); } catch {}
-    if (this._entLine) try { this._candles.removePriceLine(this._entLine); } catch {}
-    this._slLine = this._tpLine = this._entLine = null;
+    const removeLine = (line) => {
+      if (line) try { this._candles.removePriceLine(line); } catch {}
+    };
+    removeLine(this._slLine);
+    removeLine(this._tpLine);
+    removeLine(this._tp2Line);
+    removeLine(this._runnerLine);
+    removeLine(this._entLine);
+    this._slLine = this._tpLine = this._tp2Line = this._runnerLine = this._entLine = null;
   }
+
+  /**
+   * Toggle visibility of overlay line groups.
+   * @param {'entry'|'targets'|'sl'} type
+   * @param {boolean} visible
+   */
+  setOverlayVisibility(type, visible) {
+    if (!this._candles) return;
+    // LightweightCharts doesn't support hiding price lines natively;
+    // we recreate the lines with transparent/opaque color as a workaround
+    const transparentize = (color) => {
+      if (!visible) return 'transparent';
+      return color;
+    };
+
+    if (type === 'entry' && this._entLine) {
+      this._entLine.applyOptions({ color: transparentize(this._theme === 'dark' ? '#7c8fe8' : '#4f5fbf') });
+    } else if (type === 'targets') {
+      if (this._tpLine) this._tpLine.applyOptions({ color: transparentize('#00f090') });
+      if (this._tp2Line) this._tp2Line.applyOptions({ color: transparentize('#22c55e') });
+      if (this._runnerLine) this._runnerLine.applyOptions({ color: transparentize('#86efac') });
+    } else if (type === 'sl' && this._slLine) {
+      this._slLine.applyOptions({ color: transparentize('#ff3366') });
+    }
+  }
+
+
 
   // ─── INSTANT ZERO-LAG THEME UPDATE ───────────────────────────────
   setTheme(theme) {
