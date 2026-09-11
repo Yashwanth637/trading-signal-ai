@@ -251,8 +251,8 @@
       </div>
     </div>
 
-    <!-- ─── SIGNAL ACCURACY TRACKER ─────────────────────────────── -->
-    <div id="scorecard-section">
+    <!-- ─── SIGNAL ACCURACY TRACKER (HIDDEN) ─────────────────────── -->
+    <div id="scorecard-section" style="display:none;" aria-hidden="true">
       <div style="font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">
         Signal Accuracy Tracker
       </div>
@@ -280,8 +280,8 @@
       </div>
     </div>
 
-    <!-- ─── SIGNAL JOURNAL / RECENT CALLS ──────────────────────── -->
-    <div id="recent-calls-section" style="flex:1;display:flex;flex-direction:column;gap:6px;">
+    <!-- ─── SIGNAL JOURNAL / RECENT CALLS (HIDDEN) ──────────────── -->
+    <div id="recent-calls-section" style="display:none;" aria-hidden="true">
       <div style="font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.5px;">
         Signal Journal
       </div>
@@ -301,7 +301,7 @@
     </div>
   </footer>
 
-  <!-- ─── MOBILE BOTTOM NAVIGATION (Phones Only) ─────────────────── -->
+  <!-- ─── MOBILE BOTTOM NAVIGATION (Phones Only — 4 Glass Tabs) ───── -->
   <nav id="mobile-bottom-nav">
     <button class="mob-tab-btn active" data-target="chart-area">
       <span class="mob-icon">📈</span>
@@ -318,10 +318,6 @@
     <button class="mob-tab-btn" data-target="risk-section">
       <span class="mob-icon">💰</span>
       <span class="mob-label">Risk Calc</span>
-    </button>
-    <button class="mob-tab-btn" data-target="scorecard-section">
-      <span class="mob-icon">📊</span>
-      <span class="mob-label">Journal</span>
     </button>
   </nav>
 

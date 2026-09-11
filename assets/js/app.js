@@ -254,7 +254,7 @@ function wireEventListeners() {
       });
     }, { threshold: 0.3 });
 
-    ['chart-area', 'main-signal-card', 'scorecard-section'].forEach((id) => {
+    ['chart-area', 'main-signal-card', 'confluence-section', 'risk-section'].forEach((id) => {
       const el = document.getElementById(id);
       if (el) sectionObserver.observe(el);
     });

@@ -1,8 +1,9 @@
 /**
  * fourLaneEngine.js — TradersZone.ai Core Signal Engine
  *
- * Synthesizes Yashwanth's Pine Script Horizon S/R Blocks into:
- *   • Predictive institutional BUY, SELL, or WAIT signals
+ * Synthesizes Yashwanth's Pine Script Horizon S/R Blocks and Institutional
+ * Stored Rules into:
+ *   • High-precision BUY, SELL, or WAIT signals
  *   • Multi-candle structural validation (recent bounce, breakout retest, FVG fill)
  *   • 8-criteria Confluence Checklist with conviction score
  *   • Multi-Timeframe alignment gating (ensures no opposing HTF momentum)
@@ -11,6 +12,7 @@
 
 import { SMCEngine } from './smcEngine.js';
 import { ConfluenceEngine } from './confluenceEngine.js';
+import { RulesEngine } from './rulesEngine.js';
 
 export class FourLaneEngine {
   constructor(options = {}) {
@@ -30,87 +32,46 @@ export class FourLaneEngine {
 
     const len = candles.length;
     const current = candles[len - 1];
-    const prev = candles[len - 2] || current;
     const currentPrice = current.close;
 
     // Run Yashwanth Pine Script v6 S/R Horizon Engine
     const smc = this.smc.analyze(candles, htfTrend);
-    const { horizonZones, activeSupport, activeResistance, bullScore, bearScore, historicalSignals, atr } = smc;
+    const { horizonZones, activeSupport, activeResistance, historicalSignals, atr } = smc;
 
     const isJPY = symbol.includes('JPY');
     const isGold = symbol.includes('XAU') || symbol.includes('PAXG');
     const decimals = isJPY ? 3 : (isGold ? 2 : (symbol.includes('USD') && !symbol.includes('USDT') ? 5 : 2));
 
-    // ── Multi-Timeframe Bias Check ─────────────────────────────────
+    // Multi-Timeframe Matrix
     const mtf = this._mtfMatrix || {};
     const keyTFs = ['15M', '1H', '4H'];
     const bullTFCount = keyTFs.filter(tf => mtf[tf] === 'BULLISH').length;
     const bearTFCount = keyTFs.filter(tf => mtf[tf] === 'BEARISH').length;
 
-    // Strict safety: do not trade against a clear opposing HTF trend
-    const noBearOppose = bearTFCount <= 1;
-    const noBullOppose = bullTFCount <= 1;
-
-    // ── Multi-Candle Structural Price Action Scan ──────────────────
-    // Inspect last 3 candles for recent bounce or rejection
-    const recentCandles = candles.slice(-4);
-    let recentSupportBounce = false;
-    let recentResistanceReject = false;
-    let breakoutRetestHold = false;
-    let breakdownRetestFail = false;
-
-    if (activeSupport) {
-      for (const c of recentCandles) {
-        if (c.low <= activeSupport.top && c.close >= activeSupport.bottom && c.close > c.open) {
-          recentSupportBounce = true;
-          break;
-        }
-      }
-      if (current.close > activeSupport.top && prev.close <= activeSupport.top) {
-        breakoutRetestHold = true;
-      }
-    }
-
-    if (activeResistance) {
-      for (const c of recentCandles) {
-        if (c.high >= activeResistance.bottom && c.close <= activeResistance.top && c.close < c.open) {
-          recentResistanceReject = true;
-          break;
-        }
-      }
-      if (current.close < activeResistance.bottom && prev.close >= activeResistance.bottom) {
-        breakdownRetestFail = true;
-      }
-    }
-
     // Compute Confluence for BUY and SELL candidates
     const confBuy  = this.confluence.compute(candles, smc, 'BUY');
     const confSell = this.confluence.compute(candles, smc, 'SELL');
 
-    // High probability trigger criteria
-    const buyTriggered = (
-      (recentSupportBounce || breakoutRetestHold || bullScore >= 3) && confBuy.met >= 3
-    ) || (confBuy.met >= 5 && current.close > current.open);
-
-    const sellTriggered = (
-      (recentResistanceReject || breakdownRetestFail || bearScore >= 3) && confSell.met >= 3
-    ) || (confSell.met >= 5 && current.close < current.open);
+    // Evaluate Stored Institutional Quantitative Ruleset
+    const ruleEval = RulesEngine.evaluate({
+      candles,
+      smc,
+      mtfMatrix: mtf,
+      confluenceBuy: confBuy,
+      confluenceSell: confSell,
+    });
 
     // ─── BUY SIGNAL GENERATION ────────────────────────────────────
-    if (buyTriggered && noBearOppose && !sellTriggered) {
-      const stop = activeSupport ? activeSupport.bottom : (currentPrice - atr * 1.5);
-      const risk = Math.max(currentPrice * 0.004, currentPrice - stop);
-      const target = activeResistance ? Math.max(currentPrice + risk * 1.5, activeResistance.bottom) : (currentPrice + risk * 2.5);
+    if (ruleEval.verdict === 'BUY' && bearTFCount <= 1) {
+      const stop = ruleEval.stop || (activeSupport ? activeSupport.bottom : (currentPrice - atr * 1.5));
+      const risk = Math.max(currentPrice * 0.003, currentPrice - stop);
+      const target = ruleEval.target || (currentPrice + risk * 2.2);
       const reward = target - currentPrice;
       const rr = risk > 0 ? +(reward / risk).toFixed(2) : 2.2;
 
       const tp1 = +(currentPrice + risk * 1.5).toFixed(decimals);
       const tp2 = +(currentPrice + risk * 3.0).toFixed(decimals);
       const runner = +(currentPrice + risk * 5.0).toFixed(decimals);
-
-      const supDesc = activeSupport
-        ? `Support Floor [${activeSupport.bottom.toFixed(decimals)} – ${activeSupport.top.toFixed(decimals)}]`
-        : `Key Dynamic Support (${stop.toFixed(decimals)})`;
 
       const mtfStr = bullTFCount > 0 ? `${bullTFCount}/3 Higher TFs Bullish` : 'HTF Momentum Aligned';
 
@@ -119,8 +80,8 @@ export class FourLaneEngine {
         symbol,
         timeframe,
         currentPrice: +currentPrice.toFixed(decimals),
-        confidence: Math.min(96, Math.round(62 + confBuy.met * 4.2)),
-        aiReason: `BUY: Bullish structural confirmation off ${supDesc}. High Conviction (${confBuy.score} Confluence Met): ${confBuy.checklist.find(c => c.status === 'met')?.name || 'Volume Delta'} expansion and ${mtfStr}. Target 1: ${tp1} (+${(((tp1 - currentPrice) / currentPrice) * 100).toFixed(2)}%), Stop Loss: ${stop.toFixed(decimals)}.`,
+        confidence: ruleEval.confidence || Math.min(96, Math.round(65 + confBuy.met * 4)),
+        aiReason: `BUY [${ruleEval.ruleName}]: ${ruleEval.rationale} Confluence: ${confBuy.score} Met (${mtfStr}). Target 1: ${tp1} (+${(((tp1 - currentPrice) / currentPrice) * 100).toFixed(2)}%), Stop Loss: ${stop.toFixed(decimals)}.`,
         confluence: confBuy,
         levels: {
           entry:     +currentPrice.toFixed(decimals),
@@ -139,20 +100,16 @@ export class FourLaneEngine {
     }
 
     // ─── SELL SIGNAL GENERATION ───────────────────────────────────
-    if (sellTriggered && noBullOppose && !buyTriggered) {
-      const stop = activeResistance ? activeResistance.top : (currentPrice + atr * 1.5);
-      const risk = Math.max(currentPrice * 0.004, stop - currentPrice);
-      const target = activeSupport ? Math.min(currentPrice - risk * 1.5, activeSupport.top) : (currentPrice - risk * 2.5);
+    if (ruleEval.verdict === 'SELL' && bullTFCount <= 1) {
+      const stop = ruleEval.stop || (activeResistance ? activeResistance.top : (currentPrice + atr * 1.5));
+      const risk = Math.max(currentPrice * 0.003, stop - currentPrice);
+      const target = ruleEval.target || (currentPrice - risk * 2.2);
       const reward = currentPrice - target;
       const rr = risk > 0 ? +(reward / risk).toFixed(2) : 2.2;
 
       const tp1 = +(currentPrice - risk * 1.5).toFixed(decimals);
       const tp2 = +(currentPrice - risk * 3.0).toFixed(decimals);
       const runner = +(currentPrice - risk * 5.0).toFixed(decimals);
-
-      const resDesc = activeResistance
-        ? `Resistance Ceiling [${activeResistance.bottom.toFixed(decimals)} – ${activeResistance.top.toFixed(decimals)}]`
-        : `Key Dynamic Resistance (${stop.toFixed(decimals)})`;
 
       const mtfStr = bearTFCount > 0 ? `${bearTFCount}/3 Higher TFs Bearish` : 'HTF Momentum Aligned';
 
@@ -161,8 +118,8 @@ export class FourLaneEngine {
         symbol,
         timeframe,
         currentPrice: +currentPrice.toFixed(decimals),
-        confidence: Math.min(96, Math.round(62 + confSell.met * 4.2)),
-        aiReason: `SELL: Bearish distribution rejection off ${resDesc}. High Conviction (${confSell.score} Confluence Met): ${confSell.checklist.find(c => c.status === 'met')?.name || 'Volume Delta'} pressure and ${mtfStr}. Target 1: ${tp1} (-${(((currentPrice - tp1) / currentPrice) * 100).toFixed(2)}%), Stop Loss: ${stop.toFixed(decimals)}.`,
+        confidence: ruleEval.confidence || Math.min(96, Math.round(65 + confSell.met * 4)),
+        aiReason: `SELL [${ruleEval.ruleName}]: ${ruleEval.rationale} Confluence: ${confSell.score} Met (${mtfStr}). Target 1: ${tp1} (-${(((currentPrice - tp1) / currentPrice) * 100).toFixed(2)}%), Stop Loss: ${stop.toFixed(decimals)}.`,
         confluence: confSell,
         levels: {
           entry:     +currentPrice.toFixed(decimals),
@@ -186,14 +143,14 @@ export class FourLaneEngine {
     const resLabel = activeResistance ? activeResistance.top.toFixed(decimals) : '—';
 
     let waitReason;
-    if (buyTriggered && !noBearOppose) {
-      waitReason = `WAIT: Support bounce detected at ${supLabel}, but higher timeframes indicate bearish pressure (${bearTFCount}/3 HTFs Bearish). Stand aside until higher timeframe alignment confirms.`;
-    } else if (sellTriggered && !noBullOppose) {
-      waitReason = `WAIT: Resistance test detected at ${resLabel}, but higher timeframes indicate bullish pressure (${bullTFCount}/3 HTFs Bullish). Stand aside until higher timeframe alignment confirms.`;
+    if (ruleEval.verdict === 'BUY' && bearTFCount > 1) {
+      waitReason = `WAIT: Support setup detected at ${supLabel}, but higher timeframes indicate heavy bearish pressure (${bearTFCount}/3 HTFs Bearish). Stand aside until HTF structure confirms.`;
+    } else if (ruleEval.verdict === 'SELL' && bullTFCount > 1) {
+      waitReason = `WAIT: Resistance setup detected at ${resLabel}, but higher timeframes indicate heavy bullish pressure (${bullTFCount}/3 HTFs Bullish). Stand aside until HTF structure confirms.`;
     } else {
       const distSup = activeSupport ? (((currentPrice - activeSupport.top) / currentPrice) * 100).toFixed(2) : '—';
       const distRes = activeResistance ? (((activeResistance.bottom - currentPrice) / currentPrice) * 100).toFixed(2) : '—';
-      waitReason = `WAIT: Equilibrium consolidation at ${currentPrice.toFixed(decimals)}. Located +${distSup}% above Support [${supLabel}] and -${distRes}% below Resistance [${resLabel}]. Confluence: ${activeConf.score} (RSI: ${activeConf.rsi}). Awaiting corridor boundary test or confirmed Break of Structure.`;
+      waitReason = `WAIT: Equilibrium consolidation at ${currentPrice.toFixed(decimals)}. Price is +${distSup}% above Support [${supLabel}] and -${distRes}% below Resistance [${resLabel}]. Confluence: ${activeConf.score} (RSI: ${activeConf.rsi}). Stand aside until candle bodies test corridor boundaries.`;
     }
 
     return {

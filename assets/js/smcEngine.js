@@ -202,24 +202,30 @@ export class SMCEngine {
    */
   _extractHistoricalSignals(candles, horizonZones) {
     const signals = [];
-    const minSpacing = 6;
+    const minSpacing = 8;
     let lastSignalIdx = -minSpacing;
 
     for (let i = 20; i < candles.length; i++) {
       if (i - lastSignalIdx < minSpacing) continue;
 
       const c = candles[i];
-      const prev = candles[i - 1];
+      const range = c.high - c.low;
+      if (range <= 0) continue;
+
+      const body = Math.abs(c.close - c.open);
+      const bodyRatio = body / range;
 
       // Check Support floor bounce (BUY)
+      // Must have bullish body with lower rejection wick
+      const isBullRejection = c.close > c.open && bodyRatio >= 0.30 && ((c.open - c.low) >= (c.high - c.close) * 0.7);
       const sup = horizonZones.find(z =>
         !z.isResistance &&
         z.originIdx < i &&
         (!z.isBreached || z.breachIdx >= i) &&
-        c.low <= z.top && c.close >= z.bottom && c.close > c.open
+        c.low <= (z.top + range * 0.1) && c.close >= z.bottom
       );
 
-      if (sup) {
+      if (sup && isBullRejection) {
         signals.push({
           time: c.time,
           type: 'BUY',
@@ -233,14 +239,16 @@ export class SMCEngine {
       }
 
       // Check Resistance ceiling rejection (SELL)
+      // Must have bearish body with upper rejection wick
+      const isBearRejection = c.close < c.open && bodyRatio >= 0.30 && ((c.high - c.open) >= (c.close - c.low) * 0.7);
       const res = horizonZones.find(z =>
         z.isResistance &&
         z.originIdx < i &&
         (!z.isBreached || z.breachIdx >= i) &&
-        c.high >= z.bottom && c.close <= z.top && c.close < c.open
+        c.high >= (z.bottom - range * 0.1) && c.close <= z.top
       );
 
-      if (res) {
+      if (res && isBearRejection) {
         signals.push({
           time: c.time,
           type: 'SELL',
